@@ -1,0 +1,6 @@
+{
+  "name": "Loyalis Trans - Gestion des Bons de Bagages",
+  "description": "Plateforme moderne de gestion, création de bons de bagages, suivi par code QR, synchronisation en ligne et export Excel pour Loyalis Trans.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
