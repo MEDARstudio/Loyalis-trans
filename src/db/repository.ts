@@ -291,6 +291,10 @@ export async function updateSettings(newSettings: Partial<CompanySettings>): Pro
 }
 
 function mapRowToVoucher(row: typeof vouchersTable.$inferSelect): Voucher {
+  const createdBy = row.createdByAgent || '';
+  const isAdminCreator = createdBy.toLowerCase().includes('amine');
+  const isValidated = Boolean(row.isValidated) || isAdminCreator;
+
   return {
     id: row.id,
     trackingNumber: row.trackingNumber,
@@ -326,10 +330,10 @@ function mapRowToVoucher(row: typeof vouchersTable.$inferSelect): Voucher {
     agentName: row.agentName || '',
     agencyName: row.agencyName || '',
     createdByAgent: row.createdByAgent || '',
-    isValidated: row.isValidated ?? false,
-    validatedBy: row.validatedBy || '',
-    validatedAt: row.validatedAt ? row.validatedAt.toISOString() : undefined,
-    validationNotes: row.validationNotes || '',
+    isValidated,
+    validatedBy: row.validatedBy || (isAdminCreator ? 'Amine' : ''),
+    validatedAt: row.validatedAt ? row.validatedAt.toISOString() : (isAdminCreator && row.createdAt ? row.createdAt.toISOString() : undefined),
+    validationNotes: row.validationNotes || (isAdminCreator ? 'Validé automatiquement (Créé par l\'administrateur)' : ''),
     bonReelPhoto: (row.bonReelPhoto as any) || null,
     casePhotos: (row.casePhotos as any) || [],
     isExternalTransport: row.isExternalTransport ?? false,
@@ -500,10 +504,12 @@ export async function createVoucher(payload: any): Promise<{ voucher: Voucher; n
     agencyName: payload.agencyName || settings.address,
     agentName: payload.agentName || 'Agent Loyalis Trans',
     createdByAgent: payload.createdByAgent || payload.agentName || 'Sofiane',
-    isValidated: Boolean(payload.isValidated),
-    validatedBy: payload.validatedBy || undefined,
-    validatedAt: payload.validatedAt ? payload.validatedAt : undefined,
-    validationNotes: payload.validationNotes || '',
+    isValidated: payload.isValidated !== undefined 
+      ? (Boolean(payload.isValidated) || String(payload.createdByAgent || '').toLowerCase().includes('amine'))
+      : String(payload.createdByAgent || '').toLowerCase().includes('amine'),
+    validatedBy: payload.validatedBy || (String(payload.createdByAgent || '').toLowerCase().includes('amine') ? 'Amine' : undefined),
+    validatedAt: payload.validatedAt ? payload.validatedAt : (String(payload.createdByAgent || '').toLowerCase().includes('amine') ? now.toISOString() : undefined),
+    validationNotes: payload.validationNotes || (String(payload.createdByAgent || '').toLowerCase().includes('amine') ? 'Validé automatiquement (Créé par l\'administrateur)' : ''),
     bonReelPhoto: payload.bonReelPhoto || null,
     casePhotos: payload.casePhotos || [],
     isExternalTransport: Boolean(payload.isExternalTransport),

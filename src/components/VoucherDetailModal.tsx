@@ -93,7 +93,8 @@ export const VoucherDetailModal: React.FC<VoucherDetailModalProps> = ({
   if (!isOpen || !voucher) return null;
 
   const totalPhotosCount = (voucher.bonReelPhoto ? 1 : 0) + (voucher.casePhotos ? voucher.casePhotos.length : 0);
-
+  const isCreatedByAdmin = String(voucher.createdByAgent || voucher.agentName || '').toLowerCase().includes('amine');
+  const isActuallyValidated = Boolean(voucher.isValidated) || isCreatedByAdmin;
 
   const currency = settings.currency || 'DH';
   const statusInfo = getStatusBadge(voucher.status);
@@ -217,8 +218,8 @@ export const VoucherDetailModal: React.FC<VoucherDetailModalProps> = ({
               <span>Photos {totalPhotosCount > 0 ? `(${totalPhotosCount})` : ''}</span>
             </button>
 
-            {/* Validation Button if Amine */}
-            {!voucher.isValidated && currentAgent?.name === 'Amine' && onOpenValidation && (
+            {/* Validation Button if Amine and not validated */}
+            {!isActuallyValidated && currentAgent?.name === 'Amine' && onOpenValidation && (
               <button
                 type="button"
                 onClick={() => {
@@ -294,29 +295,33 @@ export const VoucherDetailModal: React.FC<VoucherDetailModalProps> = ({
           
           {/* Validation Status & Audit Card */}
           <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
-            voucher.isValidated 
+            isActuallyValidated 
               ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800 text-emerald-950 dark:text-emerald-200'
               : 'bg-amber-50 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800 text-amber-950 dark:text-amber-200'
           }`}>
             <div className="flex items-start gap-3">
               <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                voucher.isValidated ? 'bg-emerald-500 text-white' : 'bg-amber-500 text-white'
+                isActuallyValidated ? 'bg-emerald-500 text-white' : 'bg-amber-500 text-white'
               }`}>
                 <ShieldCheck className="w-5 h-5" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
                   <span className="font-black text-sm">
-                    {voucher.isValidated ? 'Bon Vérifié & Validé' : 'Bon en Attente de Validation par l\'Admin'}
+                    {isActuallyValidated 
+                      ? (isCreatedByAdmin ? 'Bon Validé d\'Office (Créé par Admin)' : 'Bon Vérifié & Validé') 
+                      : 'Bon en Attente de Validation par l\'Admin'}
                   </span>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/70 dark:bg-black/30 border border-current">
                     Créé par : {voucher.createdByAgent || voucher.agentName || 'Sofiane (Casa)'}
                   </span>
                 </div>
                 <p className="text-xs opacity-90 mt-0.5">
-                  {voucher.isValidated 
-                    ? `Validé avec succès par ${voucher.validatedByAgent || 'Amine (Admin)'}${voucher.validatedAt ? ` le ${formatDate(voucher.validatedAt)}` : ''}. ${voucher.validationNotes ? `Note: "${voucher.validationNotes}"` : ''}`
-                    : `Ce bon a été saisi au guichet. L'administrateur (Amine) doit comparer les informations avec la photo du bon réel manuscrit.`}
+                  {isActuallyValidated 
+                    ? (isCreatedByAdmin 
+                        ? 'Ce bon a été créé directement par l\'administrateur (Amine), il est donc validé d\'office et ne nécessite aucune validation.'
+                        : `Validé avec succès par ${voucher.validatedByAgent || voucher.validatedBy || 'Amine (Admin)'}${voucher.validatedAt ? ` le ${formatDate(voucher.validatedAt)}` : ''}. ${voucher.validationNotes ? `Note: "${voucher.validationNotes}"` : ''}`)
+                    : `Ce bon a été saisi au guichet par l'agent. L'administrateur (Amine) doit vérifier les informations avec le bon réel.`}
                 </p>
               </div>
             </div>
@@ -336,7 +341,7 @@ export const VoucherDetailModal: React.FC<VoucherDetailModalProps> = ({
                 </button>
               )}
 
-              {!voucher.isValidated && currentAgent?.name === 'Amine' && (
+              {!isActuallyValidated && currentAgent?.name === 'Amine' && (
                 <div className="flex items-center gap-1.5">
                   {onDirectValidate && (
                     <button

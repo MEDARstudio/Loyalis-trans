@@ -436,6 +436,12 @@ export const api = {
       agencyName: payload.agencyName || settings.address,
       agentName: payload.agentName || 'Agent Loyalis Trans',
       createdByAgent: payload.createdByAgent || '',
+      isValidated: payload.isValidated !== undefined 
+        ? (Boolean(payload.isValidated) || String(payload.createdByAgent || '').toLowerCase().includes('amine'))
+        : String(payload.createdByAgent || '').toLowerCase().includes('amine'),
+      validatedBy: payload.validatedBy || (String(payload.createdByAgent || '').toLowerCase().includes('amine') ? 'Amine' : undefined),
+      validatedAt: payload.validatedAt || (String(payload.createdByAgent || '').toLowerCase().includes('amine') ? new Date().toISOString() : undefined),
+      validationNotes: payload.validationNotes || (String(payload.createdByAgent || '').toLowerCase().includes('amine') ? 'Validé automatiquement (Créé par l\'administrateur)' : ''),
       bonReelPhoto: payload.bonReelPhoto || null,
       casePhotos: payload.casePhotos || [],
       isExternalTransport: payload.isExternalTransport || false,

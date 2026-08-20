@@ -575,12 +575,12 @@ export const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
         agentName: agentName.trim(),
         createdByAgent: initialVoucher?.createdByAgent || currentAgent?.name || 'Sofiane',
         isValidated: initialVoucher?.isValidated !== undefined 
-          ? initialVoucher.isValidated 
-          : (currentAgent?.name === 'Amine'),
-        validatedBy: initialVoucher?.validatedBy || (currentAgent?.name === 'Amine' ? 'Amine' : undefined),
-        validatedByAgent: initialVoucher?.validatedByAgent || (currentAgent?.name === 'Amine' ? 'Amine' : undefined),
-        validatedAt: initialVoucher?.validatedAt || (currentAgent?.name === 'Amine' ? new Date().toISOString() : undefined),
-        validationNotes: initialVoucher?.validationNotes || '',
+          ? (initialVoucher.isValidated || (currentAgent?.name === 'Amine' || currentAgent?.role === 'ADMIN' || initialVoucher?.createdByAgent === 'Amine'))
+          : (currentAgent?.name === 'Amine' || currentAgent?.role === 'ADMIN'),
+        validatedBy: initialVoucher?.validatedBy || (currentAgent?.name === 'Amine' || currentAgent?.role === 'ADMIN' ? (currentAgent?.name || 'Amine') : undefined),
+        validatedByAgent: initialVoucher?.validatedByAgent || (currentAgent?.name === 'Amine' || currentAgent?.role === 'ADMIN' ? (currentAgent?.name || 'Amine') : undefined),
+        validatedAt: initialVoucher?.validatedAt || (currentAgent?.name === 'Amine' || currentAgent?.role === 'ADMIN' ? new Date().toISOString() : undefined),
+        validationNotes: initialVoucher?.validationNotes || (currentAgent?.name === 'Amine' || currentAgent?.role === 'ADMIN' ? 'Validé automatiquement (Créé par l\'administrateur)' : ''),
         bonReelPhoto,
         casePhotos,
         isExternalTransport,
