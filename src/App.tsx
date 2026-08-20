@@ -7,15 +7,13 @@ import { VoucherPrintView } from './components/VoucherPrintView';
 import { VoucherShareModal } from './components/VoucherShareModal';
 import { ExcelExportModal } from './components/ExcelExportModal';
 import { SettingsModal } from './components/SettingsModal';
-import { DatabaseExplorerModal } from './components/DatabaseExplorerModal';
-import { DatabaseView } from './components/DatabaseView';
 import { TrackingLookup } from './components/TrackingLookup';
 import { StatsDashboard } from './components/StatsDashboard';
 import { HistoryStatementsView } from './components/HistoryStatementsView';
 import { VoucherValidationModal } from './components/VoucherValidationModal';
 import { CompanySettings, Voucher, VoucherStats, VoucherStatus, AgentProfile, DEFAULT_AGENTS } from './types';
 import { api } from './services/api';
-import { PlusCircle, Search, RefreshCw, AlertCircle, Sparkles, Package, BarChart3, History, Database, Plus } from 'lucide-react';
+import { PlusCircle, Search, RefreshCw, AlertCircle, Sparkles, Package, BarChart3, History, Plus } from 'lucide-react';
 
 const DEFAULT_SETTINGS_FALLBACK: CompanySettings = {
   companyName: 'Loyalis Trans',
@@ -62,7 +60,7 @@ const DEFAULT_SETTINGS_FALLBACK: CompanySettings = {
 
 export default function App() {
   // Navigation & View State
-  const [activeTab, setActiveTab] = useState<'list' | 'tracking' | 'stats' | 'history' | 'database'>('list');
+  const [activeTab, setActiveTab] = useState<'list' | 'tracking' | 'stats' | 'history'>('list');
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'error'>('syncing');
 
   // Core Data
@@ -88,7 +86,6 @@ export default function App() {
   const [shareVoucher, setShareVoucher] = useState<Voucher | null>(null);
   const [isExcelModalOpen, setIsExcelModalOpen] = useState<boolean>(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
-  const [isDatabaseExplorerOpen, setIsDatabaseExplorerOpen] = useState<boolean>(false);
   const [isValidationModalOpen, setIsValidationModalOpen] = useState<boolean>(false);
   const [validationVoucher, setValidationVoucher] = useState<Voucher | null>(null);
 
@@ -386,7 +383,6 @@ export default function App() {
         onOpenNewVoucher={handleOpenCreateModal}
         onOpenSettings={() => setIsSettingsModalOpen(true)}
         onOpenExcelExport={() => setIsExcelModalOpen(true)}
-        onOpenDatabaseExplorer={() => setIsDatabaseExplorerOpen(true)}
         settings={settings}
         syncStatus={syncStatus}
         onRefreshData={() => loadData()}
@@ -460,10 +456,6 @@ export default function App() {
             onUpdateVoucher={handleUpdateVoucherDirect}
             onOpenExcelExport={() => setIsExcelModalOpen(true)}
           />
-        )}
-
-        {activeTab === 'database' && (
-          <DatabaseView />
         )}
 
       </main>
@@ -627,12 +619,6 @@ export default function App() {
         settings={settings}
         onSaveSettings={handleSaveSettings}
         onResetDemo={handleResetDemo}
-      />
-
-      {/* 6. Database Explorer Modal (PostgreSQL Cloud SQL Viewer & Backup) */}
-      <DatabaseExplorerModal
-        isOpen={isDatabaseExplorerOpen}
-        onClose={() => setIsDatabaseExplorerOpen(false)}
       />
 
     </div>

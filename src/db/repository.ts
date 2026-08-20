@@ -1,4 +1,4 @@
-import { db, createPool } from './index.ts';
+import { db, createPool, isDatabaseConfigured, getConnectionString } from './index.ts';
 import { settingsTable, vouchersTable, users } from './schema.ts';
 import { eq, desc, and, gte, lte, or, ilike, inArray } from 'drizzle-orm';
 import { CompanySettings, Voucher, VoucherStats } from '../types.ts';
@@ -91,8 +91,12 @@ let memoryVouchers: Voucher[] = [
 ];
 
 export async function ensureDatabaseColumns(): Promise<void> {
+  const pool = createPool();
+  if (!pool) {
+    return;
+  }
+
   try {
-    const pool = createPool();
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -185,7 +189,7 @@ export async function ensureDatabaseColumns(): Promise<void> {
       ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS validation_notes TEXT;
     `);
   } catch (err: any) {
-    console.warn('[Database notice]: Using memory/fallback if database pool is unavailable:', err?.message || err);
+    console.warn('[Database Setup Info]:', err?.message || err);
   }
 }
 
@@ -198,54 +202,37 @@ export function formatTrackingCode(seqNumber: number, settings: CompanySettings)
 }
 
 export async function getSettings(): Promise<CompanySettings> {
-  try {
-    const rows = await db.select().from(settingsTable).limit(1);
-    if (rows.length === 0) {
-      await db.insert(settingsTable).values({
-        id: 1,
-        companyName: DEFAULT_SETTINGS.companyName,
-        tagline: DEFAULT_SETTINGS.tagline,
-        phone1: DEFAULT_SETTINGS.phone1,
-        phone2: DEFAULT_SETTINGS.phone2,
-        email: DEFAULT_SETTINGS.email,
-        address: DEFAULT_SETTINGS.address,
-        currency: DEFAULT_SETTINGS.currency,
-        trackingCodeDigits: DEFAULT_SETTINGS.trackingCodeDigits,
-        trackingPrefix: DEFAULT_SETTINGS.trackingPrefix,
-        trackingSuffix: DEFAULT_SETTINGS.trackingSuffix,
-        nextTrackingNumber: DEFAULT_SETTINGS.nextTrackingNumber,
-        allowManualTrackingNumber: DEFAULT_SETTINGS.allowManualTrackingNumber,
-        defaultDepartureCity: DEFAULT_SETTINGS.defaultDepartureCity,
-        defaultAgencies: DEFAULT_SETTINGS.defaultAgencies,
-        defaultNatureOptions: DEFAULT_SETTINGS.defaultNatureOptions,
-        termsAndConditions: DEFAULT_SETTINGS.termsAndConditions,
-      }).catch(() => {});
-      return memorySettings;
+  if (db && isDatabaseConfigured()) {
+    try {
+      const rows = await db.select().from(settingsTable).limit(1);
+      if (rows.length > 0) {
+        const row = rows[0];
+        const res: CompanySettings = {
+          companyName: row.companyName,
+          tagline: row.tagline || '',
+          phone1: row.phone1 || '',
+          phone2: row.phone2 || '',
+          email: row.email || '',
+          address: row.address || '',
+          currency: row.currency || 'DH',
+          trackingCodeDigits: row.trackingCodeDigits || 7,
+          trackingPrefix: row.trackingPrefix || '',
+          trackingSuffix: row.trackingSuffix || '',
+          nextTrackingNumber: row.nextTrackingNumber || 1,
+          allowManualTrackingNumber: row.allowManualTrackingNumber ?? true,
+          defaultDepartureCity: row.defaultDepartureCity || 'Casablanca',
+          defaultAgencies: (row.defaultAgencies as string[]) || DEFAULT_SETTINGS.defaultAgencies,
+          defaultNatureOptions: (row.defaultNatureOptions as string[]) || DEFAULT_SETTINGS.defaultNatureOptions,
+          termsAndConditions: row.termsAndConditions || DEFAULT_SETTINGS.termsAndConditions,
+        };
+        memorySettings = { ...res };
+        return res;
+      }
+    } catch (error) {
+      // Fall through to memory
     }
-    const row = rows[0];
-    const res: CompanySettings = {
-      companyName: row.companyName,
-      tagline: row.tagline || '',
-      phone1: row.phone1 || '',
-      phone2: row.phone2 || '',
-      email: row.email || '',
-      address: row.address || '',
-      currency: row.currency || 'DH',
-      trackingCodeDigits: row.trackingCodeDigits || 7,
-      trackingPrefix: row.trackingPrefix || '',
-      trackingSuffix: row.trackingSuffix || '',
-      nextTrackingNumber: row.nextTrackingNumber || 1,
-      allowManualTrackingNumber: row.allowManualTrackingNumber ?? true,
-      defaultDepartureCity: row.defaultDepartureCity || 'Casablanca',
-      defaultAgencies: (row.defaultAgencies as string[]) || DEFAULT_SETTINGS.defaultAgencies,
-      defaultNatureOptions: (row.defaultNatureOptions as string[]) || DEFAULT_SETTINGS.defaultNatureOptions,
-      termsAndConditions: row.termsAndConditions || DEFAULT_SETTINGS.termsAndConditions,
-    };
-    memorySettings = { ...res };
-    return res;
-  } catch (error) {
-    return memorySettings;
   }
+  return memorySettings;
 }
 
 export async function updateSettings(newSettings: Partial<CompanySettings>): Promise<CompanySettings> {
@@ -253,29 +240,10 @@ export async function updateSettings(newSettings: Partial<CompanySettings>): Pro
   const merged: CompanySettings = { ...current, ...newSettings };
   memorySettings = merged;
 
-  try {
-    await db.insert(settingsTable).values({
-      id: 1,
-      companyName: merged.companyName,
-      tagline: merged.tagline,
-      phone1: merged.phone1,
-      phone2: merged.phone2,
-      email: merged.email,
-      address: merged.address,
-      currency: merged.currency,
-      trackingCodeDigits: merged.trackingCodeDigits,
-      trackingPrefix: merged.trackingPrefix,
-      trackingSuffix: merged.trackingSuffix,
-      nextTrackingNumber: merged.nextTrackingNumber,
-      allowManualTrackingNumber: merged.allowManualTrackingNumber,
-      defaultDepartureCity: merged.defaultDepartureCity,
-      defaultAgencies: merged.defaultAgencies,
-      defaultNatureOptions: merged.defaultNatureOptions,
-      termsAndConditions: merged.termsAndConditions,
-      updatedAt: new Date(),
-    }).onConflictDoUpdate({
-      target: settingsTable.id,
-      set: {
+  if (db && isDatabaseConfigured()) {
+    try {
+      await db.insert(settingsTable).values({
+        id: 1,
         companyName: merged.companyName,
         tagline: merged.tagline,
         phone1: merged.phone1,
@@ -293,10 +261,31 @@ export async function updateSettings(newSettings: Partial<CompanySettings>): Pro
         defaultNatureOptions: merged.defaultNatureOptions,
         termsAndConditions: merged.termsAndConditions,
         updatedAt: new Date(),
-      }
-    });
-  } catch (error) {
-    // Graceful in-memory update
+      }).onConflictDoUpdate({
+        target: settingsTable.id,
+        set: {
+          companyName: merged.companyName,
+          tagline: merged.tagline,
+          phone1: merged.phone1,
+          phone2: merged.phone2,
+          email: merged.email,
+          address: merged.address,
+          currency: merged.currency,
+          trackingCodeDigits: merged.trackingCodeDigits,
+          trackingPrefix: merged.trackingPrefix,
+          trackingSuffix: merged.trackingSuffix,
+          nextTrackingNumber: merged.nextTrackingNumber,
+          allowManualTrackingNumber: merged.allowManualTrackingNumber,
+          defaultDepartureCity: merged.defaultDepartureCity,
+          defaultAgencies: merged.defaultAgencies,
+          defaultNatureOptions: merged.defaultNatureOptions,
+          termsAndConditions: merged.termsAndConditions,
+          updatedAt: new Date(),
+        }
+      });
+    } catch (error) {
+      // Memory handles
+    }
   }
   return merged;
 }
@@ -361,13 +350,18 @@ export async function getVouchers(filters?: {
   endDate?: string;
 }): Promise<Voucher[]> {
   let vouchers: Voucher[] = [];
-  try {
-    const rows = await db.select().from(vouchersTable).orderBy(desc(vouchersTable.createdAt));
-    vouchers = rows.map(mapRowToVoucher);
-    if (vouchers.length > 0) {
-      memoryVouchers = vouchers;
+
+  if (db && isDatabaseConfigured()) {
+    try {
+      const rows = await db.select().from(vouchersTable).orderBy(desc(vouchersTable.createdAt));
+      vouchers = rows.map(mapRowToVoucher);
+      if (vouchers.length > 0) {
+        memoryVouchers = vouchers;
+      }
+    } catch (error) {
+      vouchers = [...memoryVouchers];
     }
-  } catch (error) {
+  } else {
     vouchers = [...memoryVouchers];
   }
 
@@ -408,19 +402,21 @@ export async function getVouchers(filters?: {
 }
 
 export async function getVoucherByIdOrTracking(idOrTracking: string): Promise<Voucher | null> {
-  try {
-    const rows = await db.select().from(vouchersTable).where(
-      or(
-        eq(vouchersTable.id, idOrTracking),
-        eq(vouchersTable.trackingNumber, idOrTracking)
-      )
-    ).limit(1);
+  if (db && isDatabaseConfigured()) {
+    try {
+      const rows = await db.select().from(vouchersTable).where(
+        or(
+          eq(vouchersTable.id, idOrTracking),
+          eq(vouchersTable.trackingNumber, idOrTracking)
+        )
+      ).limit(1);
 
-    if (rows.length > 0) {
-      return mapRowToVoucher(rows[0]);
+      if (rows.length > 0) {
+        return mapRowToVoucher(rows[0]);
+      }
+    } catch (error) {
+      // fallback
     }
-  } catch (error) {
-    // fallback
   }
 
   const found = memoryVouchers.find(v => v.id === idOrTracking || v.trackingNumber === idOrTracking);
@@ -524,55 +520,56 @@ export async function createVoucher(payload: any): Promise<{ voucher: Voucher; n
   // Update memory store
   memoryVouchers = [newVoucher, ...memoryVouchers.filter(v => v.id !== id)];
 
-  // Try DB persistence
-  try {
-    await db.insert(vouchersTable).values({
-      id,
-      trackingNumber: String(finalTrackingNumber).trim(),
-      sequenceNumber,
-      date: newVoucher.date,
-      time: newVoucher.time,
-      createdAt: now,
-      updatedAt: now,
-      senderName: newVoucher.sender.name,
-      senderCin: newVoucher.sender.cin,
-      senderPhone: newVoucher.sender.phone,
-      senderAddress: newVoucher.sender.address,
-      recipientName: newVoucher.recipient.name,
-      recipientDestination: newVoucher.recipient.destination,
-      recipientPhone: newVoucher.recipient.phone,
-      recipientAddress: newVoucher.recipient.address,
-      departureCity: newVoucher.departureCity,
-      destinationCity: newVoucher.destinationCity,
-      items: sanitizedItems,
-      totalColis: newVoucher.totalColis,
-      totalWeightKg: newVoucher.totalWeightKg,
-      totalPrice: newVoucher.totalPrice,
-      paymentStatus: finalPaymentStatus,
-      advanceAmount: advance,
-      remainingAmount: remaining,
-      paymentMethod: newVoucher.paymentMethod,
-      status: newVoucher.status,
-      notes: newVoucher.notes,
-      agencyName: newVoucher.agencyName,
-      agentName: newVoucher.agentName,
-      createdByAgent: newVoucher.createdByAgent,
-      isValidated: newVoucher.isValidated,
-      validatedBy: newVoucher.validatedBy || null,
-      validatedAt: newVoucher.validatedAt ? new Date(newVoucher.validatedAt) : null,
-      validationNotes: newVoucher.validationNotes,
-      bonReelPhoto: newVoucher.bonReelPhoto,
-      casePhotos: newVoucher.casePhotos,
-      isExternalTransport: newVoucher.isExternalTransport,
-      externalCarrierName: newVoucher.externalCarrierName,
-      externalCarrierPhone: newVoucher.externalCarrierPhone,
-      externalCarrierVoucherRef: newVoucher.externalCarrierVoucherRef,
-      externalCost: newVoucher.externalCost,
-      externalPaymentStatus: newVoucher.externalPaymentStatus,
-      externalNotes: newVoucher.externalNotes,
-    });
-  } catch (error) {
-    // Memory store handles it
+  if (db && isDatabaseConfigured()) {
+    try {
+      await db.insert(vouchersTable).values({
+        id,
+        trackingNumber: String(finalTrackingNumber).trim(),
+        sequenceNumber,
+        date: newVoucher.date,
+        time: newVoucher.time,
+        createdAt: now,
+        updatedAt: now,
+        senderName: newVoucher.sender.name,
+        senderCin: newVoucher.sender.cin,
+        senderPhone: newVoucher.sender.phone,
+        senderAddress: newVoucher.sender.address,
+        recipientName: newVoucher.recipient.name,
+        recipientDestination: newVoucher.recipient.destination,
+        recipientPhone: newVoucher.recipient.phone,
+        recipientAddress: newVoucher.recipient.address,
+        departureCity: newVoucher.departureCity,
+        destinationCity: newVoucher.destinationCity,
+        items: sanitizedItems,
+        totalColis: newVoucher.totalColis,
+        totalWeightKg: newVoucher.totalWeightKg,
+        totalPrice: newVoucher.totalPrice,
+        paymentStatus: finalPaymentStatus,
+        advanceAmount: advance,
+        remainingAmount: remaining,
+        paymentMethod: newVoucher.paymentMethod,
+        status: newVoucher.status,
+        notes: newVoucher.notes,
+        agencyName: newVoucher.agencyName,
+        agentName: newVoucher.agentName,
+        createdByAgent: newVoucher.createdByAgent,
+        isValidated: newVoucher.isValidated,
+        validatedBy: newVoucher.validatedBy || null,
+        validatedAt: newVoucher.validatedAt ? new Date(newVoucher.validatedAt) : null,
+        validationNotes: newVoucher.validationNotes,
+        bonReelPhoto: newVoucher.bonReelPhoto,
+        casePhotos: newVoucher.casePhotos,
+        isExternalTransport: newVoucher.isExternalTransport,
+        externalCarrierName: newVoucher.externalCarrierName,
+        externalCarrierPhone: newVoucher.externalCarrierPhone,
+        externalCarrierVoucherRef: newVoucher.externalCarrierVoucherRef,
+        externalCost: newVoucher.externalCost,
+        externalPaymentStatus: newVoucher.externalPaymentStatus,
+        externalNotes: newVoucher.externalNotes,
+      });
+    } catch (error) {
+      // Memory store handles it
+    }
   }
 
   const updatedSettings = await getSettings();
@@ -648,51 +645,53 @@ export async function updateVoucher(idOrTracking: string, payload: any): Promise
 
   memoryVouchers = memoryVouchers.map(v => v.id === existing.id ? updated : v);
 
-  try {
-    await db.update(vouchersTable).set({
-      trackingNumber: updated.trackingNumber,
-      date: updated.date,
-      time: updated.time,
-      updatedAt: new Date(),
-      senderName: updated.sender.name,
-      senderCin: updated.sender.cin,
-      senderPhone: updated.sender.phone,
-      senderAddress: updated.sender.address,
-      recipientName: updated.recipient.name,
-      recipientDestination: updated.recipient.destination,
-      recipientPhone: updated.recipient.phone,
-      recipientAddress: updated.recipient.address,
-      departureCity: updated.departureCity,
-      destinationCity: updated.destinationCity,
-      items,
-      totalColis: updated.totalColis,
-      totalWeightKg: updated.totalWeightKg,
-      totalPrice: updated.totalPrice,
-      paymentStatus: finalPaymentStatus,
-      advanceAmount: finalAdvance,
-      remainingAmount: finalRemaining,
-      paymentMethod: updated.paymentMethod,
-      status: updated.status,
-      notes: updated.notes,
-      agencyName: updated.agencyName,
-      agentName: updated.agentName,
-      createdByAgent: updated.createdByAgent,
-      isValidated: updated.isValidated,
-      validatedBy: updated.validatedBy || null,
-      validatedAt: updated.validatedAt ? new Date(updated.validatedAt) : null,
-      validationNotes: updated.validationNotes,
-      bonReelPhoto: updated.bonReelPhoto,
-      casePhotos: updated.casePhotos,
-      isExternalTransport: updated.isExternalTransport,
-      externalCarrierName: updated.externalCarrierName,
-      externalCarrierPhone: updated.externalCarrierPhone,
-      externalCarrierVoucherRef: updated.externalCarrierVoucherRef,
-      externalCost: updated.externalCost,
-      externalPaymentStatus: updated.externalPaymentStatus,
-      externalNotes: updated.externalNotes,
-    }).where(eq(vouchersTable.id, existing.id));
-  } catch (error) {
-    // Memory store handles it
+  if (db && isDatabaseConfigured()) {
+    try {
+      await db.update(vouchersTable).set({
+        trackingNumber: updated.trackingNumber,
+        date: updated.date,
+        time: updated.time,
+        updatedAt: new Date(),
+        senderName: updated.sender.name,
+        senderCin: updated.sender.cin,
+        senderPhone: updated.sender.phone,
+        senderAddress: updated.sender.address,
+        recipientName: updated.recipient.name,
+        recipientDestination: updated.recipient.destination,
+        recipientPhone: updated.recipient.phone,
+        recipientAddress: updated.recipient.address,
+        departureCity: updated.departureCity,
+        destinationCity: updated.destinationCity,
+        items,
+        totalColis: updated.totalColis,
+        totalWeightKg: updated.totalWeightKg,
+        totalPrice: updated.totalPrice,
+        paymentStatus: finalPaymentStatus,
+        advanceAmount: finalAdvance,
+        remainingAmount: finalRemaining,
+        paymentMethod: updated.paymentMethod,
+        status: updated.status,
+        notes: updated.notes,
+        agencyName: updated.agencyName,
+        agentName: updated.agentName,
+        createdByAgent: updated.createdByAgent,
+        isValidated: updated.isValidated,
+        validatedBy: updated.validatedBy || null,
+        validatedAt: updated.validatedAt ? new Date(updated.validatedAt) : null,
+        validationNotes: updated.validationNotes,
+        bonReelPhoto: updated.bonReelPhoto,
+        casePhotos: updated.casePhotos,
+        isExternalTransport: updated.isExternalTransport,
+        externalCarrierName: updated.externalCarrierName,
+        externalCarrierPhone: updated.externalCarrierPhone,
+        externalCarrierVoucherRef: updated.externalCarrierVoucherRef,
+        externalCost: updated.externalCost,
+        externalPaymentStatus: updated.externalPaymentStatus,
+        externalNotes: updated.externalNotes,
+      }).where(eq(vouchersTable.id, existing.id));
+    } catch (error) {
+      // Memory store handles it
+    }
   }
 
   return updated;
@@ -716,16 +715,18 @@ export async function validateVoucher(
 
   memoryVouchers = memoryVouchers.map(v => v.id === existing.id ? updated : v);
 
-  try {
-    await db.update(vouchersTable).set({
-      isValidated: validation.isValidated,
-      validatedBy: validation.validatedBy,
-      validatedAt: validation.isValidated ? new Date() : null,
-      validationNotes: validation.validationNotes || '',
-      updatedAt: new Date(),
-    }).where(eq(vouchersTable.id, existing.id));
-  } catch (error) {
-    // Memory fallback
+  if (db && isDatabaseConfigured()) {
+    try {
+      await db.update(vouchersTable).set({
+        isValidated: validation.isValidated,
+        validatedBy: validation.validatedBy,
+        validatedAt: validation.isValidated ? new Date() : null,
+        validationNotes: validation.validationNotes || '',
+        updatedAt: new Date(),
+      }).where(eq(vouchersTable.id, existing.id));
+    } catch (error) {
+      // Memory fallback
+    }
   }
 
   return updated;
@@ -737,10 +738,12 @@ export async function deleteVoucher(idOrTracking: string): Promise<boolean> {
 
   memoryVouchers = memoryVouchers.filter(v => v.id !== existing.id && v.trackingNumber !== existing.trackingNumber);
 
-  try {
-    await db.delete(vouchersTable).where(eq(vouchersTable.id, existing.id));
-  } catch (error) {
-    // Memory handles
+  if (db && isDatabaseConfigured()) {
+    try {
+      await db.delete(vouchersTable).where(eq(vouchersTable.id, existing.id));
+    } catch (error) {
+      // Memory handles
+    }
   }
   return true;
 }
@@ -762,18 +765,20 @@ export async function batchValidateVouchers(ids: string[], validatedBy: string):
     return v;
   });
 
-  try {
-    await db.update(vouchersTable)
-      .set({
-        isValidated: true,
-        validatedBy: validatedBy || 'Amine',
-        validatedAt: new Date(),
-        validationNotes: 'Validation groupée rapide',
-        updatedAt: new Date()
-      })
-      .where(or(inArray(vouchersTable.id, ids), inArray(vouchersTable.trackingNumber, ids)));
-  } catch (error) {
-    // Memory fallback
+  if (db && isDatabaseConfigured()) {
+    try {
+      await db.update(vouchersTable)
+        .set({
+          isValidated: true,
+          validatedBy: validatedBy || 'Amine',
+          validatedAt: new Date(),
+          validationNotes: 'Validation groupée rapide',
+          updatedAt: new Date()
+        })
+        .where(or(inArray(vouchersTable.id, ids), inArray(vouchersTable.trackingNumber, ids)));
+    } catch (error) {
+      // Memory fallback
+    }
   }
   return ids.length;
 }
@@ -788,12 +793,14 @@ export async function batchUpdateStatus(ids: string[], status: string): Promise<
     return v;
   });
 
-  try {
-    await db.update(vouchersTable)
-      .set({ status, updatedAt: new Date() })
-      .where(or(inArray(vouchersTable.id, ids), inArray(vouchersTable.trackingNumber, ids)));
-  } catch (error) {
-    // Memory fallback
+  if (db && isDatabaseConfigured()) {
+    try {
+      await db.update(vouchersTable)
+        .set({ status, updatedAt: new Date() })
+        .where(or(inArray(vouchersTable.id, ids), inArray(vouchersTable.trackingNumber, ids)));
+    } catch (error) {
+      // Memory fallback
+    }
   }
   return ids.length;
 }
@@ -802,11 +809,13 @@ export async function batchDelete(ids: string[]): Promise<number> {
   if (!ids.length) return 0;
   memoryVouchers = memoryVouchers.filter(v => !ids.includes(v.id) && !ids.includes(v.trackingNumber));
 
-  try {
-    await db.delete(vouchersTable)
-      .where(or(inArray(vouchersTable.id, ids), inArray(vouchersTable.trackingNumber, ids)));
-  } catch (error) {
-    // Memory fallback
+  if (db && isDatabaseConfigured()) {
+    try {
+      await db.delete(vouchersTable)
+        .where(or(inArray(vouchersTable.id, ids), inArray(vouchersTable.trackingNumber, ids)));
+    } catch (error) {
+      // Memory fallback
+    }
   }
   return ids.length;
 }
@@ -841,13 +850,15 @@ export async function seedInitialDataIfEmpty(): Promise<void> {
 export async function getDatabaseExplorerData() {
   const vouchers = await getVouchers();
   const settings = await getSettings();
+  const configured = isDatabaseConfigured();
+  const connString = getConnectionString();
 
   return {
-    connected: true,
-    databaseType: 'PostgreSQL (Supabase Cloud Database)',
-    region: 'eu-central-1',
-    projectId: 'nhvmbzhpcaaqfjgnkdrd',
-    instanceName: 'supabase-postgres-loyalis',
+    connected: configured,
+    databaseType: configured ? 'PostgreSQL (Supabase Cloud Database)' : 'Stockage Local Sécurisé (En attente de connexion Supabase)',
+    region: 'Prêt pour nouvelle instance',
+    projectId: configured ? 'Instance Connectée' : 'Non Connecté',
+    instanceName: configured ? 'supabase-postgres' : 'Stockage Local / Mémoire',
     timestamp: new Date().toISOString(),
     tables: [
       {

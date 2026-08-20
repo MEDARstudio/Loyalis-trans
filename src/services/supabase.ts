@@ -1,20 +1,28 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { CompanySettings, Voucher } from '../types';
 
-// Default Supabase project credentials (extracted from database connection or env)
-const DEFAULT_SUPABASE_URL = 
-  ((import.meta as any).env?.VITE_SUPABASE_URL) || 
-  'https://nhvmbzhpcaaqfjgnkdrd.supabase.co';
+// Default Supabase project credentials provided by user
+const DEFAULT_SUPABASE_URL = ((import.meta as any).env?.VITE_SUPABASE_URL) || 'https://olahhcegkeqromqdfwnj.supabase.co';
+const DEFAULT_SUPABASE_ANON_KEY = ((import.meta as any).env?.VITE_SUPABASE_ANON_KEY) || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sYWhoY2Vna2Vxcm9tcWRmd25qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyMzA0OTIsImV4cCI6MjEwMjgwNjQ5Mn0.1T-6Yj5BJS7O3gfrLV0Z5c_9EM6Da00WJc31iCY4K9s';
 
-const DEFAULT_SUPABASE_ANON_KEY = 
-  ((import.meta as any).env?.VITE_SUPABASE_ANON_KEY) || 
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5odm1iemhwY2FhcWZqZ25rZHJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcwNDcyNTUsImV4cCI6MjEwMjYyMzI1NX0.nPG_Zrq9VYxOdbqULdMdSWWet-7JSX2jOPLvaeZ9PP4';
-
-const SUPABASE_CONFIG_STORAGE_KEY = 'loyalis_trans_supabase_config_v1';
+const SUPABASE_CONFIG_STORAGE_KEY = 'loyalis_trans_supabase_config_v2';
 
 export interface SupabaseConfig {
   url: string;
   anonKey: string;
+}
+
+export function getDatabaseProjectName(url?: string): string {
+  const targetUrl = url || getStoredSupabaseConfig().url;
+  if (!targetUrl || targetUrl.trim() === '') return 'Non configurée';
+  try {
+    const parsed = new URL(targetUrl.trim());
+    const host = parsed.hostname;
+    const projectRef = host.split('.')[0];
+    return projectRef || host;
+  } catch {
+    return targetUrl.replace(/^https?:\/\//, '').split('.')[0] || 'Base Supabase';
+  }
 }
 
 export function getStoredSupabaseConfig(): SupabaseConfig {
@@ -46,15 +54,28 @@ export function saveStoredSupabaseConfig(config: SupabaseConfig): void {
   }
 }
 
+export function clearStoredSupabaseConfig(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.removeItem(SUPABASE_CONFIG_STORAGE_KEY);
+    localStorage.removeItem('loyalis_trans_supabase_config_v1');
+    _cachedClient = null;
+  } catch (e) {
+    console.warn('Failed to clear supabase config:', e);
+  }
+}
+
 let _cachedClient: SupabaseClient | null = null;
 
 export function getSupabaseClient(): SupabaseClient | null {
   const config = getStoredSupabaseConfig();
-  if (!config.url || !config.anonKey) return null;
+  if (!config.url || !config.anonKey || config.url.trim() === '' || config.anonKey.trim() === '') {
+    return null;
+  }
 
   if (!_cachedClient) {
     try {
-      _cachedClient = createClient(config.url, config.anonKey, {
+      _cachedClient = createClient(config.url.trim(), config.anonKey.trim(), {
         auth: {
           persistSession: true,
           autoRefreshToken: true,
@@ -72,22 +93,22 @@ export function getSupabaseClient(): SupabaseClient | null {
 export async function testSupabaseConnection(): Promise<{ ok: boolean; message: string; tableExists?: boolean }> {
   const client = getSupabaseClient();
   if (!client) {
-    return { ok: false, message: 'URL ou Clé API Supabase non configurée' };
+    return { ok: false, message: 'Aucune base Supabase configurée. Veuillez renseigner l\'URL et la Clé API.' };
   }
 
   try {
     const { data, error } = await client.from('vouchers').select('id').limit(1);
     if (error) {
-      if (error.code === '42P01' || error.message?.includes('relation "vouchers" does not exist')) {
+      if (error.code === '42P01' || error.message?.includes('relation "vouchers" does not exist') || error.message?.includes('does not exist')) {
         return { 
           ok: true, 
           tableExists: false, 
-          message: 'Connecté à Supabase mais la table "vouchers" n\'a pas encore été créée dans le SQL Editor.' 
+          message: 'Connecté avec succès à Supabase ! Veuillez exécuter le script SQL dans le SQL Editor pour créer la table "vouchers".' 
         };
       }
       return { ok: false, message: `Erreur Supabase: ${error.message} (${error.code || ''})` };
     }
-    return { ok: true, tableExists: true, message: 'Connexion Supabase active et table "vouchers" opérationnelle !' };
+    return { ok: true, tableExists: true, message: 'Connexion Supabase active et tables opérationnelles !' };
   } catch (err: any) {
     return { ok: false, message: err?.message || 'Impossible de joindre le serveur Supabase' };
   }
@@ -117,7 +138,7 @@ CREATE TABLE IF NOT EXISTS public.settings (
     default_departure_city TEXT DEFAULT 'Casablanca',
     default_agencies JSONB DEFAULT '["Casablanca", "Tanger", "Marrakech", "Agadir", "Rabat", "Fès", "Oujda", "Nador", "Paris", "Bruxelles", "Madrid", "Lyon", "Bordeaux"]'::jsonb,
     default_nature_options JSONB DEFAULT '["Valise", "Carton standard", "Sac de voyage", "Effets personnels", "Électroménager", "Matériel informatique", "Textile / Vêtements", "Colis alimentaire scellé", "Documents"]'::jsonb,
-    terms_and_conditions TEXT DEFAULT '1. Les bagages doivent être fermés et étiquetés avec le numéro de bon.\\n2. La société Loyalis Trans décline toute responsabilité pour les objets précieux non déclarés.\\n3. Tout colis non réclamé après 30 jours fera l\\'objet de frais de gardiennage.\\n4. La présentation du bon original ou du code QR est obligatoire lors du retrait.',
+    terms_and_conditions TEXT DEFAULT '1. Les bagages doivent être fermés et étiquetés avec le numéro de bon.\n2. La société Loyalis Trans décline toute responsabilité pour les objets précieux non déclarés.\n3. Tout colis non réclamé après 30 jours fera l''objet de frais de gardiennage.\n4. La présentation du bon original ou du code QR est obligatoire lors du retrait.',
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -193,9 +214,20 @@ CREATE TABLE IF NOT EXISTS public.vouchers (
     external_notes TEXT
 );
 
--- 3. Activer Row Level Security (RLS) et permettre la lecture / écriture publique
+-- 3. Table des Utilisateurs & Agents (Users)
+CREATE TABLE IF NOT EXISTS public.users (
+    id SERIAL PRIMARY KEY,
+    uid TEXT NOT NULL UNIQUE,
+    email TEXT NOT NULL,
+    display_name TEXT,
+    role TEXT DEFAULT 'AGENT',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 4. Activer Row Level Security (RLS) et permettre la lecture / écriture
 ALTER TABLE public.settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vouchers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Public full access settings" ON public.settings;
 CREATE POLICY "Public full access settings" ON public.settings FOR ALL USING (true) WITH CHECK (true);
@@ -203,13 +235,16 @@ CREATE POLICY "Public full access settings" ON public.settings FOR ALL USING (tr
 DROP POLICY IF EXISTS "Public full access vouchers" ON public.vouchers;
 CREATE POLICY "Public full access vouchers" ON public.vouchers FOR ALL USING (true) WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Public full access users" ON public.users;
+CREATE POLICY "Public full access users" ON public.users FOR ALL USING (true) WITH CHECK (true);
+
 -- Index pour recherche ultra-rapide
 CREATE INDEX IF NOT EXISTS idx_vouchers_tracking ON public.vouchers(tracking_number);
 CREATE INDEX IF NOT EXISTS idx_vouchers_date ON public.vouchers(date);
 CREATE INDEX IF NOT EXISTS idx_vouchers_status ON public.vouchers(status);
 `;
 
-// Direct Supabase Data Operations for Frontend (GitHub Pages or Cloud Run)
+// Direct Supabase Data Operations for Frontend
 export const supabaseApi = {
   async getSettings(): Promise<CompanySettings | null> {
     const client = getSupabaseClient();
@@ -375,15 +410,15 @@ export const supabaseApi = {
         validated_by: v.validatedBy || '',
         validated_at: v.validatedAt || null,
         validation_notes: v.validationNotes || '',
-        bon_reel_photo: v.bonReelPhoto || null,
-        case_photos: v.casePhotos || [],
-        is_external_transport: v.isExternalTransport || false,
-        external_carrier_name: v.externalCarrierName || '',
-        external_carrier_phone: v.externalCarrierPhone || '',
-        external_carrier_voucher_ref: v.externalCarrierVoucherRef || '',
-        external_cost: v.externalCost || 0,
-        external_payment_status: v.externalPaymentStatus || 'PAID',
-        external_notes: v.externalNotes || ''
+        bonReelPhoto: v.bonReelPhoto || null,
+        casePhotos: v.casePhotos || [],
+        isExternalTransport: v.isExternalTransport || false,
+        externalCarrierName: v.externalCarrierName || '',
+        externalCarrierPhone: v.externalCarrierPhone || '',
+        externalCarrierVoucherRef: v.externalCarrierVoucherRef || '',
+        externalCost: v.externalCost || 0,
+        externalPaymentStatus: v.externalPaymentStatus || 'PAID',
+        externalNotes: v.externalNotes || ''
       };
 
       const { error } = await client.from('vouchers').upsert(row);
@@ -422,7 +457,7 @@ export const supabaseApi = {
 
   async syncAllLocalVouchersToSupabase(vouchers: Voucher[]): Promise<{ count: number; error?: string }> {
     const client = getSupabaseClient();
-    if (!client) return { count: 0, error: 'Client Supabase non initialisé' };
+    if (!client) return { count: 0, error: 'Client Supabase non configuré' };
 
     try {
       let successCount = 0;

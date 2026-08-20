@@ -29,7 +29,9 @@ import { ConfirmModal } from './ConfirmModal';
 import { 
   getStoredSupabaseConfig, 
   saveStoredSupabaseConfig, 
+  clearStoredSupabaseConfig,
   testSupabaseConnection, 
+  getDatabaseProjectName,
   SUPABASE_SQL_CREATION_SCRIPT,
   supabaseApi
 } from '../services/supabase';
@@ -245,7 +247,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             }`}
           >
             <Database className="w-4 h-4 text-emerald-500" />
-            <span>Liaison Supabase (GitHub & Cloud)</span>
+            <span>Base de Données</span>
           </button>
 
           <button
@@ -573,64 +575,136 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           )}
 
-          {/* TAB 4: SUPABASE DIRECT CLOUD INTEGRATION (Requested for GitHub Pages & Cloud) */}
+          {/* TAB 4: DATABASE & CLOUD STATUS */}
           {activeTab === 'supabase' && (
             <div className="space-y-5">
               
-              <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 flex items-start gap-3">
-                <Cloud className="w-6 h-6 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="text-sm font-black text-emerald-900 dark:text-emerald-200 uppercase">
-                    Liaison Directe Supabase PostgreSQL
-                  </h4>
-                  <p className="text-xs text-emerald-800 dark:text-emerald-300 mt-0.5 leading-relaxed">
-                    Permet au site (qu'il soit hébergé sur GitHub Pages ou en serveur Cloud) d'enregistrer et lire directement les bons de transport dans votre projet Supabase.
-                  </p>
-                </div>
-              </div>
+              {/* Connected Database Information & Status Card */}
+              {(() => {
+                const dbName = getDatabaseProjectName(supabaseConfig.url);
+                const isConfigured = Boolean(supabaseConfig.url && supabaseConfig.anonKey);
+                const isConnected = isConfigured && (supabaseStatus.ok === true);
 
-              {/* Live Connection Test Banner */}
-              <div className="p-4 rounded-xl bg-slate-900 text-white border border-slate-800 flex flex-wrap items-center justify-between gap-3">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-black uppercase text-slate-400">Statut Supabase :</span>
-                    {supabaseStatus.testing ? (
-                      <span className="text-xs text-amber-400 font-bold flex items-center gap-1">
-                        <RefreshCw className="w-3 h-3 animate-spin" />
-                        Test en cours...
-                      </span>
-                    ) : supabaseStatus.ok ? (
-                      <span className="text-xs text-emerald-400 font-bold flex items-center gap-1">
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        Connecté avec succès à Supabase !
-                      </span>
-                    ) : (
-                      <span className="text-xs text-rose-400 font-bold flex items-center gap-1">
-                        <AlertTriangle className="w-3.5 h-3.5" />
-                        Non connecté ({supabaseStatus.message || 'Vérifiez la table'})
-                      </span>
+                return (
+                  <div className={`p-5 rounded-2xl border-2 transition-all ${
+                    supabaseStatus.testing 
+                      ? 'bg-slate-50 dark:bg-slate-800/60 border-slate-300 dark:border-slate-700' 
+                      : isConnected
+                        ? 'bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/40 dark:to-teal-950/20 border-emerald-400 dark:border-emerald-700 shadow-sm'
+                        : isConfigured && supabaseStatus.ok === false
+                          ? 'bg-gradient-to-br from-rose-50 to-amber-50 dark:from-rose-950/40 dark:to-amber-950/20 border-rose-300 dark:border-rose-800'
+                          : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700'
+                  }`}>
+                    <div className="flex items-start justify-between flex-wrap gap-4">
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Database className={`w-5 h-5 ${isConnected ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500'}`} />
+                          <span className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                            Base de données connectée :
+                          </span>
+                          {isConnected ? (
+                            <span className="px-2.5 py-1 rounded-full text-xs font-black bg-emerald-600 text-white shadow-xs flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                              {dbName} (Connectée)
+                            </span>
+                          ) : supabaseStatus.testing ? (
+                            <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500 text-white flex items-center gap-1.5">
+                              <RefreshCw className="w-3 h-3 animate-spin" />
+                              Vérification en cours...
+                            </span>
+                          ) : (
+                            <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-700 text-slate-200 flex items-center gap-1.5">
+                              <AlertTriangle className="w-3 h-3 text-amber-400" />
+                              Non connectée
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2 flex-wrap">
+                          <span>Nom du Projet :</span>
+                          <span className="font-mono text-orange-600 dark:text-orange-400 bg-white dark:bg-slate-900 px-2.5 py-0.5 rounded-lg border border-slate-300 dark:border-slate-700 text-xs">
+                            {dbName}
+                          </span>
+                          <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
+                            (Hôte : db.olahhcegkeqromqdfwnj.supabase.co:5432)
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-[11px] font-mono text-slate-600 dark:text-slate-300">
+                          <div className="bg-white/70 dark:bg-slate-900/70 p-1.5 rounded border border-slate-200 dark:border-slate-800">
+                            <span className="text-slate-400 text-[10px] block">Hôte</span>
+                            <span className="truncate block font-semibold text-slate-800 dark:text-slate-200">db.{dbName}.supabase.co</span>
+                          </div>
+                          <div className="bg-white/70 dark:bg-slate-900/70 p-1.5 rounded border border-slate-200 dark:border-slate-800">
+                            <span className="text-slate-400 text-[10px] block">Port</span>
+                            <span className="font-semibold text-slate-800 dark:text-slate-200">5432</span>
+                          </div>
+                          <div className="bg-white/70 dark:bg-slate-900/70 p-1.5 rounded border border-slate-200 dark:border-slate-800">
+                            <span className="text-slate-400 text-[10px] block">Database</span>
+                            <span className="font-semibold text-slate-800 dark:text-slate-200">postgres</span>
+                          </div>
+                          <div className="bg-white/70 dark:bg-slate-900/70 p-1.5 rounded border border-slate-200 dark:border-slate-800">
+                            <span className="text-slate-400 text-[10px] block">Utilisateur</span>
+                            <span className="font-semibold text-slate-800 dark:text-slate-200">postgres</span>
+                          </div>
+                        </div>
+
+                        <p className="text-xs text-slate-600 dark:text-slate-400 max-w-xl">
+                          {isConnected 
+                            ? `Le site est correctement relié à la base de données Supabase [${dbName}]. Tous les enregistrements, modifications et états des colis sont synchronisés.`
+                            : isConfigured
+                              ? `Identifiants configurés pour [${dbName}]. Cliquez sur "Tester la Connexion" pour vérifier l'accès aux tables.`
+                              : "Aucune base de données externe n'est configurée. Le site fonctionne actuellement en mode local."}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={checkSupabase}
+                          disabled={supabaseStatus.testing}
+                          className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                        >
+                          <RefreshCw className={`w-3.5 h-3.5 ${supabaseStatus.testing ? 'animate-spin' : ''}`} />
+                          <span>{supabaseStatus.testing ? 'Test...' : 'Tester la Connexion'}</span>
+                        </button>
+
+                        {isConfigured && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              clearStoredSupabaseConfig();
+                              setSupabaseConfig({ url: '', anonKey: '' });
+                              setSupabaseStatus({ testing: false, ok: false, message: 'Déconnectée' });
+                            }}
+                            className="px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-600 dark:text-rose-400 text-xs font-bold transition-all cursor-pointer"
+                            title="Déconnecter cette base"
+                          >
+                            Déconnecter
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {supabaseStatus.message && (
+                      <div className={`mt-3 p-2.5 rounded-xl text-xs font-mono ${
+                        supabaseStatus.ok
+                          ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-200'
+                          : 'bg-rose-100 text-rose-900 dark:bg-rose-900/40 dark:text-rose-200'
+                      }`}>
+                        {supabaseStatus.message}
+                      </div>
                     )}
                   </div>
-                  {supabaseStatus.message && (
-                    <p className="text-[11px] text-slate-400 font-mono">
-                      {supabaseStatus.message}
-                    </p>
-                  )}
-                </div>
+                );
+              })()}
 
-                <button
-                  type="button"
-                  onClick={checkSupabase}
-                  disabled={supabaseStatus.testing}
-                  className="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
-                >
-                  <RefreshCw className={`w-3 h-3 ${supabaseStatus.testing ? 'animate-spin' : ''}`} />
-                  <span>Tester la Connexion</span>
-                </button>
-              </div>
+              {/* Supabase URL & Anon Key Inputs */}
+              <div className="space-y-4 pt-2">
+                <h5 className="text-xs font-black text-slate-800 dark:text-slate-200 uppercase tracking-wider">
+                  Paramètres de Connexion Supabase
+                </h5>
 
-              {/* Supabase URL & Anon Key */}
-              <div className="space-y-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                     Supabase Project URL
@@ -639,8 +713,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     type="text"
                     value={supabaseConfig.url}
                     onChange={e => setSupabaseConfig({ ...supabaseConfig, url: e.target.value.trim() })}
-                    placeholder="https://nhvmbzhpcaaqfjgnkdrd.supabase.co"
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-mono focus:ring-2 focus:ring-orange-500"
+                    placeholder="https://olahhcegkeqromqdfwnj.supabase.co"
+                    className="w-full px-3 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-mono focus:ring-2 focus:ring-orange-500"
                   />
                 </div>
 
@@ -653,20 +727,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     value={supabaseConfig.anonKey}
                     onChange={e => setSupabaseConfig({ ...supabaseConfig, anonKey: e.target.value.trim() })}
                     placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6..."
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-mono focus:ring-2 focus:ring-orange-500"
+                    className="w-full px-3 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-mono focus:ring-2 focus:ring-orange-500"
                   />
                 </div>
               </div>
 
               {/* Action Box: SQL Table Creation Script & Direct Synchronizer */}
-              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-3">
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-4">
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div>
                     <strong className="text-xs font-bold text-slate-900 dark:text-white block">
-                      Script SQL d'Initialisation (Tables & RLS)
+                      Script SQL d'Initialisation des Tables
                     </strong>
                     <span className="text-[11px] text-slate-500">
-                      À coller dans le SQL Editor de Supabase pour créer la table des bons
+                      À coller une seule fois dans le SQL Editor de Supabase pour créer la structure
                     </span>
                   </div>
 
@@ -693,10 +767,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <div className="pt-3 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between flex-wrap gap-3">
                   <div>
                     <strong className="text-xs font-bold text-slate-900 dark:text-white block">
-                      Synchroniser tous les Bons Existants vers Supabase
+                      Synchroniser les Bons Existants vers Supabase
                     </strong>
                     <span className="text-[11px] text-slate-500">
-                      Envoie immédiatement tous les bons locaux vers la table Supabase
+                      Envoie immédiatement les bons enregistrés vers votre base connectée
                     </span>
                   </div>
 
@@ -707,7 +781,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-emerald-600/30 transition-all cursor-pointer"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${syncingAllToSupabase ? 'animate-spin' : ''}`} />
-                    <span>{syncingAllToSupabase ? 'Synchronisation...' : 'Forcer la Synchronisation'}</span>
+                    <span>{syncingAllToSupabase ? 'Synchronisation...' : 'Synchroniser les Données'}</span>
                   </button>
                 </div>
 

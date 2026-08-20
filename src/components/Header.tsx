@@ -23,12 +23,11 @@ import {
 import { CompanySettings, AgentProfile, DEFAULT_AGENTS } from '../types';
 
 interface HeaderProps {
-  activeTab: 'list' | 'tracking' | 'stats' | 'history' | 'database';
-  setActiveTab: (tab: 'list' | 'tracking' | 'stats' | 'history' | 'database') => void;
+  activeTab: 'list' | 'tracking' | 'stats' | 'history';
+  setActiveTab: (tab: 'list' | 'tracking' | 'stats' | 'history') => void;
   onOpenNewVoucher: () => void;
   onOpenSettings: () => void;
   onOpenExcelExport: () => void;
-  onOpenDatabaseExplorer: () => void;
   settings: CompanySettings;
   syncStatus: 'synced' | 'syncing' | 'error';
   onRefreshData: () => void;
@@ -43,7 +42,6 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenNewVoucher,
   onOpenSettings,
   onOpenExcelExport,
-  onOpenDatabaseExplorer,
   settings,
   syncStatus,
   onRefreshData,
@@ -78,7 +76,7 @@ export const Header: React.FC<HeaderProps> = ({
     };
   }, [isMobileMenuOpen]);
 
-  const handleTabSelect = (tab: 'list' | 'tracking' | 'stats' | 'history' | 'database') => {
+  const handleTabSelect = (tab: 'list' | 'tracking' | 'stats' | 'history') => {
     setActiveTab(tab);
     setIsMobileMenuOpen(false);
   };
@@ -102,17 +100,17 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
 
             <div className="flex items-center gap-1.5 shrink-0">
-              {/* Live Cloud DB Sync Indicator */}
+              {/* Live Cloud DB Sync Indicator (Opens settings) */}
               <button 
-                id="btn-header-db-explorer"
-                onClick={onOpenDatabaseExplorer}
+                id="btn-header-db-status"
+                onClick={onOpenSettings}
                 className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-0.5 rounded-full bg-slate-900 hover:bg-slate-800 border border-slate-700/80 hover:border-orange-500/50 text-slate-300 transition-all cursor-pointer text-[9px] sm:text-[10px] font-bold"
-                title="Inspecter la base de données PostgreSQL Supabase"
+                title="Statut de connexion - Ouvrir les paramètres"
               >
                 {syncStatus === 'synced' && (
                   <>
-                    <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 shrink-0"></span>
-                    <span className="text-[9px] sm:text-[10px] font-bold text-emerald-400">Supabase</span>
+                    <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 shrink-0 animate-pulse"></span>
+                    <span className="text-[9px] sm:text-[10px] font-bold text-emerald-400">Supabase Connecté</span>
                   </>
                 )}
                 {syncStatus === 'syncing' && (
@@ -124,7 +122,7 @@ export const Header: React.FC<HeaderProps> = ({
                 {syncStatus === 'error' && (
                   <>
                     <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-amber-500 shrink-0"></span>
-                    <span className="text-[9px] sm:text-[10px] font-bold text-amber-400">Local</span>
+                    <span className="text-[9px] sm:text-[10px] font-bold text-amber-400">Local (Non connecté)</span>
                   </>
                 )}
               </button>
@@ -224,19 +222,6 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <History className="w-3.5 h-3.5" />
               <span>Relevés</span>
-            </button>
-
-            <button
-              id="nav-tab-database"
-              onClick={() => handleTabSelect('database')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-xs uppercase tracking-wider transition-all cursor-pointer ${
-                activeTab === 'database'
-                  ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
-              }`}
-            >
-              <Database className="w-3.5 h-3.5 text-orange-400" />
-              <span>Base</span>
             </button>
           </nav>
 
@@ -519,29 +504,6 @@ export const Header: React.FC<HeaderProps> = ({
                         <div className="text-sm font-bold">Historique & Relevés</div>
                         <div className={`text-xs ${activeTab === 'history' ? 'text-orange-100' : 'text-slate-400'}`}>
                           Rapports mensuels & sous-traitance
-                        </div>
-                      </div>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-slate-400" />
-                  </button>
-
-                  <button
-                    id="mobile-nav-database"
-                    onClick={() => handleTabSelect('database')}
-                    className={`w-full p-3 rounded-2xl flex items-center justify-between transition-all cursor-pointer ${
-                      activeTab === 'database'
-                        ? 'bg-orange-500 text-white font-bold shadow-md shadow-orange-500/25'
-                        : 'bg-slate-850 hover:bg-slate-800 text-slate-200 border border-slate-800'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-xl ${activeTab === 'database' ? 'bg-orange-600' : 'bg-slate-900 text-orange-400'}`}>
-                        <Database className="w-5 h-5" />
-                      </div>
-                      <div className="text-left">
-                        <div className="text-sm font-bold">Base de Données Supabase</div>
-                        <div className={`text-xs ${activeTab === 'database' ? 'text-orange-100' : 'text-slate-400'}`}>
-                          Tables & synchronisation cloud
                         </div>
                       </div>
                     </div>
