@@ -86,14 +86,14 @@ export const VoucherValidationModal: React.FC<VoucherValidationModalProps> = ({
   return (
     <div 
       id="voucher-validation-modal"
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/85 backdrop-blur-md overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/85 overflow-y-auto"
     >
-      <div className="relative w-full max-w-5xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden my-auto flex flex-col max-h-[94vh]">
+      <div className="relative w-full max-w-5xl bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden my-auto flex flex-col max-h-[94vh]">
         
         {/* Header */}
         <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center font-black text-lg text-white shadow-lg shadow-emerald-500/30">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-600 flex items-center justify-center font-black text-lg text-white shadow-sm">
               <ShieldCheck className="w-6 h-6" />
             </div>
             <div>
@@ -416,7 +416,7 @@ export const VoucherValidationModal: React.FC<VoucherValidationModalProps> = ({
                   id="btn-confirm-validation"
                   onClick={handleApprove}
                   disabled={isSubmitting}
-                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-emerald-600/30 flex items-center gap-1.5 transition-all cursor-pointer"
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
                 >
                   <CheckCircle2 className="w-4 h-4" />
                   <span>{voucher.isValidated ? 'Mettre à jour la validation' : 'Valider & Approuver le Bon'}</span>

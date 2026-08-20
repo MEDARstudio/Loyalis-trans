@@ -117,17 +117,17 @@ export const VoucherPrintView: React.FC<VoucherPrintViewProps> = ({
   return (
     <div 
       id="voucher-print-modal"
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/85 backdrop-blur-md overflow-y-auto print:p-0 print:bg-white print:static"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/85 overflow-y-auto print:p-0 print:bg-white print:static"
     >
       {/* Container Box */}
-      <div className="relative w-full max-w-4xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden my-auto max-h-[96vh] flex flex-col print:max-h-none print:shadow-none print:border-none print:rounded-none">
+      <div className="relative w-full max-w-4xl bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden my-auto max-h-[96vh] flex flex-col print:max-h-none print:shadow-none print:border-none print:rounded-none">
         
         {/* Action Toolbar (Hidden during browser print) */}
         <div className="px-4 sm:px-6 py-3.5 bg-slate-900 text-white flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 print:hidden sticky top-0 z-30">
           
           {/* Left Title & Branding */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center font-black text-base text-white shadow-lg shadow-orange-600/30">
+            <div className="w-10 h-10 rounded-2xl bg-orange-600 flex items-center justify-center font-black text-base text-white shadow-sm">
               LT
             </div>
             <div>
@@ -161,7 +161,7 @@ export const VoucherPrintView: React.FC<VoucherPrintViewProps> = ({
               id="btn-trigger-download-img"
               onClick={handleDownloadImage}
               disabled={isExportingImage}
-              className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-600/20 transition-all cursor-pointer"
+              className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
             >
               <ImageIcon className="w-3.5 h-3.5" />
               <span>{isExportingImage ? 'Génération...' : 'Télécharger Image (PNG HD)'}</span>
@@ -172,7 +172,7 @@ export const VoucherPrintView: React.FC<VoucherPrintViewProps> = ({
               id="btn-trigger-download-pdf"
               onClick={() => handleDownloadNativePDF()}
               disabled={isExportingPDF}
-              className="px-4 py-1.5 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white font-black text-xs shadow-md shadow-orange-600/30 flex items-center gap-1.5 transition-all cursor-pointer"
+              className="px-4 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-black text-xs shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
             >
               <Download className="w-3.5 h-3.5" />
               <span>{isExportingPDF ? 'Génération...' : 'Télécharger PDF (A4)'}</span>
@@ -275,8 +275,18 @@ export const VoucherPrintView: React.FC<VoucherPrintViewProps> = ({
                   <div className="flex flex-wrap items-start justify-between gap-3 border-b-2 border-slate-200 pb-3">
                     <div className="space-y-1 max-w-xs">
                       <div className="flex items-center gap-2.5">
-                        <div className="w-10 h-10 rounded-xl bg-orange-600 text-white font-black text-lg flex items-center justify-center shadow-md shadow-orange-600/30">
-                          LT
+                        <div className="w-11 h-11 rounded-xl bg-slate-900 border border-slate-700 flex items-center justify-center p-0.5 shadow-sm shrink-0 overflow-hidden">
+                          <img 
+                            src="/logo.png" 
+                            alt="Logo" 
+                            className="w-full h-full object-contain" 
+                            onError={(e) => {
+                              (e.currentTarget as HTMLElement).style.display = 'none';
+                              if (e.currentTarget.parentElement) {
+                                e.currentTarget.parentElement.innerHTML = '<span class="font-black text-orange-500 text-sm">LT</span>';
+                              }
+                            }}
+                          />
                         </div>
                         <div>
                           <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-950 leading-none uppercase">
@@ -495,9 +505,19 @@ export const VoucherPrintView: React.FC<VoucherPrintViewProps> = ({
 
                   <div className="flex items-center justify-between border-b border-slate-200 pb-2">
                     <div className="flex items-center gap-2.5">
-                      <span className="w-8 h-8 rounded-lg bg-slate-900 text-white font-black text-xs flex items-center justify-center shadow-xs">
-                        LT
-                      </span>
+                      <div className="w-8 h-8 rounded-lg bg-slate-900 border border-slate-700 flex items-center justify-center p-0.5 shadow-xs overflow-hidden shrink-0">
+                        <img 
+                          src="/logo.png" 
+                          alt="Logo" 
+                          className="w-full h-full object-contain" 
+                          onError={(e) => {
+                            (e.currentTarget as HTMLElement).style.display = 'none';
+                            if (e.currentTarget.parentElement) {
+                              e.currentTarget.parentElement.innerHTML = '<span class="font-black text-orange-500 text-[10px]">LT</span>';
+                            }
+                          }}
+                        />
+                      </div>
                       <div>
                         <span className="font-black text-sm text-slate-900 uppercase">LOYALIS TRANS</span>
                         <span className="text-xs text-slate-600 ml-2 font-bold">
@@ -574,8 +594,18 @@ export const VoucherPrintView: React.FC<VoucherPrintViewProps> = ({
                 <div className="flex flex-wrap items-start justify-between gap-4 border-b-2 border-slate-900 pb-4">
                   <div className="space-y-1.5 max-w-sm">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-2xl bg-orange-600 text-white font-black text-2xl flex items-center justify-center shadow-lg shadow-orange-600/30">
-                        LT
+                      <div className="w-12 h-12 rounded-2xl bg-slate-900 border border-slate-700 flex items-center justify-center p-1 shadow-sm overflow-hidden shrink-0">
+                        <img 
+                          src="/logo.png" 
+                          alt="Logo" 
+                          className="w-full h-full object-contain" 
+                          onError={(e) => {
+                            (e.currentTarget as HTMLElement).style.display = 'none';
+                            if (e.currentTarget.parentElement) {
+                              e.currentTarget.parentElement.innerHTML = '<span class="font-black text-orange-500 text-lg">LT</span>';
+                            }
+                          }}
+                        />
                       </div>
                       <div>
                         <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950 leading-none uppercase">

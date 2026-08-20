@@ -147,11 +147,21 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Brand Logo & Title */}
           <div 
             id="header-brand-logo"
-            className="flex items-center gap-1.5 sm:gap-2.5 cursor-pointer select-none shrink-0" 
+            className="flex items-center gap-2 sm:gap-3 cursor-pointer select-none shrink-0" 
             onClick={() => handleTabSelect('list')}
           >
-            <div className="bg-gradient-to-br from-orange-500 to-orange-600 p-1.5 sm:p-2 rounded-xl font-black text-sm sm:text-lg text-white shadow-md shadow-orange-500/30 tracking-tight flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 shrink-0">
-              LT
+            <div className="relative w-9 h-9 sm:w-11 sm:h-11 rounded-xl overflow-hidden bg-slate-900 border border-slate-700/80 flex items-center justify-center p-0.5 shrink-0">
+              <img 
+                src="/logo.png" 
+                alt="Loyalis Trans Logo" 
+                className="w-full h-full object-contain"
+                onError={(e) => {
+                  (e.currentTarget as HTMLElement).style.display = 'none';
+                  if (e.currentTarget.parentElement) {
+                    e.currentTarget.parentElement.innerHTML = '<span class="font-black text-orange-500 text-base">LT</span>';
+                  }
+                }}
+              />
             </div>
             <div className="min-w-0">
               <h1 className="text-base sm:text-2xl font-black tracking-tight uppercase text-white leading-none truncate">
@@ -170,7 +180,7 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={() => handleTabSelect('list')}
               className={`flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-lg font-bold text-xs uppercase tracking-wider transition-all cursor-pointer ${
                 activeTab === 'list'
-                  ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30'
+                  ? 'bg-orange-500 text-white shadow-sm'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800'
               }`}
             >
@@ -190,7 +200,7 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={() => handleTabSelect('tracking')}
               className={`flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-lg font-bold text-xs uppercase tracking-wider transition-all cursor-pointer ${
                 activeTab === 'tracking'
-                  ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30'
+                  ? 'bg-orange-500 text-white shadow-sm'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800'
               }`}
             >
@@ -203,7 +213,7 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={() => handleTabSelect('stats')}
               className={`flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-lg font-bold text-xs uppercase tracking-wider transition-all cursor-pointer ${
                 activeTab === 'stats'
-                  ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30'
+                  ? 'bg-orange-500 text-white shadow-sm'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800'
               }`}
             >
@@ -216,7 +226,7 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={() => handleTabSelect('history')}
               className={`flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-lg font-bold text-xs uppercase tracking-wider transition-all cursor-pointer ${
                 activeTab === 'history'
-                  ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30'
+                  ? 'bg-orange-500 text-white shadow-sm'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800'
               }`}
             >
@@ -344,7 +354,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               id="btn-header-new-voucher"
               onClick={onOpenNewVoucher}
-              className="flex items-center gap-1 px-2.5 sm:px-4 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white font-bold text-xs sm:text-sm uppercase tracking-wider shadow-md shadow-orange-500/25 transition-all cursor-pointer shrink-0"
+              className="flex items-center gap-1 px-2.5 sm:px-4 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white font-bold text-xs sm:text-sm uppercase tracking-wider shadow-sm transition-all cursor-pointer shrink-0"
             >
               <PlusCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
               <span className="hidden sm:inline">Nouveau Bon</span>
@@ -430,7 +440,7 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Structured Mobile Drawer Navigation Menu */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-50 md:hidden flex flex-col justify-end bg-black/75 backdrop-blur-sm animate-fadeIn">
+        <div className="fixed inset-0 z-50 md:hidden flex flex-col justify-end bg-black/80 animate-fadeIn">
           {/* Backdrop dismiss */}
           <div 
             className="flex-1 w-full"
@@ -438,13 +448,23 @@ export const Header: React.FC<HeaderProps> = ({
           />
 
           {/* Drawer Box */}
-          <div className="bg-slate-900 border-t-2 border-orange-500 rounded-t-3xl shadow-2xl w-full max-h-[85vh] flex flex-col overflow-hidden animate-slideUp">
+          <div className="bg-slate-900 border-t-2 border-orange-500 rounded-t-3xl shadow-xl w-full max-h-[85vh] flex flex-col overflow-hidden animate-slideUp">
             
             {/* Drawer Top Header */}
             <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950">
               <div className="flex items-center gap-3">
-                <div className="bg-orange-500 p-2 rounded-xl text-white font-black text-sm shadow-md shadow-orange-500/30">
-                  LT
+                <div className="relative w-9 h-9 rounded-xl overflow-hidden bg-slate-900 border border-slate-700 flex items-center justify-center p-0.5 shrink-0">
+                  <img 
+                    src="/logo.png" 
+                    alt="Loyalis Trans Logo" 
+                    className="w-full h-full object-contain"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLElement).style.display = 'none';
+                      if (e.currentTarget.parentElement) {
+                        e.currentTarget.parentElement.innerHTML = '<span class="font-black text-orange-500 text-sm">LT</span>';
+                      }
+                    }}
+                  />
                 </div>
                 <div>
                   <h2 className="text-sm font-black uppercase text-white tracking-wide">
@@ -479,7 +499,7 @@ export const Header: React.FC<HeaderProps> = ({
                     onClick={() => handleTabSelect('list')}
                     className={`w-full p-3 rounded-2xl flex items-center justify-between transition-all cursor-pointer ${
                       activeTab === 'list'
-                        ? 'bg-orange-500 text-white font-bold shadow-md shadow-orange-500/25'
+                        ? 'bg-orange-500 text-white font-bold'
                         : 'bg-slate-850 hover:bg-slate-800 text-slate-200 border border-slate-800'
                     }`}
                   >
@@ -508,7 +528,7 @@ export const Header: React.FC<HeaderProps> = ({
                     onClick={() => handleTabSelect('tracking')}
                     className={`w-full p-3 rounded-2xl flex items-center justify-between transition-all cursor-pointer ${
                       activeTab === 'tracking'
-                        ? 'bg-orange-500 text-white font-bold shadow-md shadow-orange-500/25'
+                        ? 'bg-orange-500 text-white font-bold'
                         : 'bg-slate-850 hover:bg-slate-800 text-slate-200 border border-slate-800'
                     }`}
                   >
@@ -531,7 +551,7 @@ export const Header: React.FC<HeaderProps> = ({
                     onClick={() => handleTabSelect('stats')}
                     className={`w-full p-3 rounded-2xl flex items-center justify-between transition-all cursor-pointer ${
                       activeTab === 'stats'
-                        ? 'bg-orange-500 text-white font-bold shadow-md shadow-orange-500/25'
+                        ? 'bg-orange-500 text-white font-bold'
                         : 'bg-slate-850 hover:bg-slate-800 text-slate-200 border border-slate-800'
                     }`}
                   >
@@ -554,7 +574,7 @@ export const Header: React.FC<HeaderProps> = ({
                     onClick={() => handleTabSelect('history')}
                     className={`w-full p-3 rounded-2xl flex items-center justify-between transition-all cursor-pointer ${
                       activeTab === 'history'
-                        ? 'bg-orange-500 text-white font-bold shadow-md shadow-orange-500/25'
+                        ? 'bg-orange-500 text-white font-bold'
                         : 'bg-slate-850 hover:bg-slate-800 text-slate-200 border border-slate-800'
                     }`}
                   >
@@ -616,7 +636,7 @@ export const Header: React.FC<HeaderProps> = ({
                   setIsMobileMenuOpen(false);
                   onOpenNewVoucher();
                 }}
-                className="w-full py-3.5 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-black text-sm uppercase tracking-wider shadow-lg shadow-orange-500/30 flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-3.5 rounded-2xl bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white font-black text-sm uppercase tracking-wider shadow-sm flex items-center justify-center gap-2 cursor-pointer"
               >
                 <PlusCircle className="w-5 h-5" />
                 <span>Nouveau Bon d'Expédition</span>

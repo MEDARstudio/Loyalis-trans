@@ -130,14 +130,24 @@ export const VoucherDetailModal: React.FC<VoucherDetailModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-950/80 backdrop-blur-sm overflow-y-auto">
-      <div className="relative w-full max-w-4xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden my-auto max-h-[92vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-950/85 overflow-y-auto">
+      <div className="relative w-full max-w-4xl bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden my-auto max-h-[92vh] flex flex-col">
         
         {/* Top Sticky Header */}
         <div className="px-6 py-4 bg-slate-900 text-white border-b border-slate-800 flex items-center justify-between sticky top-0 z-20">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-orange-600 flex items-center justify-center font-black text-lg shadow-lg shadow-orange-600/30">
-              LT
+            <div className="w-10 h-10 rounded-xl bg-slate-950 border border-slate-700 flex items-center justify-center p-0.5 shadow-sm overflow-hidden shrink-0">
+              <img 
+                src="/logo.png" 
+                alt="Logo" 
+                className="w-full h-full object-contain"
+                onError={(e) => {
+                  (e.currentTarget as HTMLElement).style.display = 'none';
+                  if (e.currentTarget.parentElement) {
+                    e.currentTarget.parentElement.innerHTML = '<span class="font-black text-orange-500 text-sm">LT</span>';
+                  }
+                }}
+              />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -209,7 +219,7 @@ export const VoucherDetailModal: React.FC<VoucherDetailModalProps> = ({
               }}
               className={`px-3.5 py-1.5 rounded-xl font-bold text-xs shadow-sm flex items-center gap-1.5 transition-all ${
                 totalPhotosCount > 0
-                  ? 'bg-amber-600 hover:bg-amber-700 text-white shadow-amber-600/30 ring-2 ring-amber-400/40'
+                  ? 'bg-amber-600 hover:bg-amber-700 text-white'
                   : 'border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200'
               }`}
               title="Consulter les photos et le bon réel manuscrit"
@@ -347,7 +357,7 @@ export const VoucherDetailModal: React.FC<VoucherDetailModalProps> = ({
                     <button
                       type="button"
                       onClick={() => onDirectValidate(voucher.id)}
-                      className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black flex items-center gap-1.5 shadow-sm shadow-emerald-600/30 cursor-pointer"
+                      className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black flex items-center gap-1.5 shadow-sm cursor-pointer"
                       title="Valider ce bon immédiatement sans obliger l'ouverture du bon réel"
                     >
                       <CheckCircle2 className="w-3.5 h-3.5" />
@@ -361,7 +371,7 @@ export const VoucherDetailModal: React.FC<VoucherDetailModalProps> = ({
                         onClose();
                         onOpenValidation(voucher);
                       }}
-                      className="px-3 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-black flex items-center gap-1.5 shadow-sm shadow-orange-600/30 cursor-pointer"
+                      className="px-3 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-black flex items-center gap-1.5 shadow-sm cursor-pointer"
                       title="Comparer avec la photo du bon réel et auditer"
                     >
                       <ShieldCheck className="w-3.5 h-3.5" />
@@ -896,7 +906,7 @@ export const VoucherDetailModal: React.FC<VoucherDetailModalProps> = ({
                       className="w-full h-36 object-cover opacity-90 group-hover:opacity-100 transition-opacity" 
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent flex flex-col justify-between p-2.5">
-                      <span className="self-start text-[10px] font-bold px-2 py-0.5 rounded bg-black/60 backdrop-blur-sm text-slate-200 font-mono border border-white/20">
+                      <span className="self-start text-[10px] font-bold px-2 py-0.5 rounded bg-black/80 text-slate-200 font-mono border border-white/20">
                         Colis / Cas #{idx + 1}
                       </span>
                       <div>
@@ -965,7 +975,7 @@ export const VoucherDetailModal: React.FC<VoucherDetailModalProps> = ({
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => onOpenPrint(voucher)}
-              className="px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs shadow-md shadow-orange-600/20 flex items-center gap-2 transition-all"
+              className="px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs shadow-sm flex items-center gap-2 transition-all cursor-pointer"
             >
               <Printer className="w-4 h-4" />
               <span>Imprimer le Bon / PDF</span>

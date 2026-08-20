@@ -27,14 +27,14 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   return (
     <div 
       id="confirm-modal-backdrop"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs transition-opacity"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 transition-opacity"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div 
         id="confirm-modal-box"
-        className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+        className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 p-6 overflow-hidden animate-in fade-in zoom-in-95 duration-150"
       >
         <div className="flex items-start gap-4">
           <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
@@ -81,10 +81,10 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
               onConfirm();
               onClose();
             }}
-            className={`px-5 py-2 text-xs font-bold text-white rounded-xl shadow-md transition-all flex items-center gap-1.5 ${
+            className={`px-5 py-2 text-xs font-bold text-white rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer ${
               isDestructive 
-                ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-600/20 active:scale-95' 
-                : 'bg-orange-600 hover:bg-orange-700 shadow-orange-600/20 active:scale-95'
+                ? 'bg-rose-600 hover:bg-rose-700 active:scale-95' 
+                : 'bg-orange-600 hover:bg-orange-700 active:scale-95'
             }`}
           >
             {isDestructive && <Trash2 className="w-3.5 h-3.5" />}

@@ -144,7 +144,7 @@ export const VouchersList: React.FC<VouchersListProps> = ({
             {/* New Voucher Button */}
             <button
               onClick={onOpenCreate}
-              className="px-3.5 sm:px-4 py-2 bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md shadow-orange-500/25 flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="px-3.5 sm:px-4 py-2 bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <PlusCircle className="w-4 h-4" />
               <span>Nouveau Bon</span>
@@ -290,7 +290,7 @@ export const VouchersList: React.FC<VouchersListProps> = ({
           </div>
           <button
             onClick={onOpenCreate}
-            className="px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md shadow-orange-500/30 inline-flex items-center gap-2 transition-all"
+            className="px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-sm inline-flex items-center gap-2 transition-all cursor-pointer"
           >
             <PlusCircle className="w-4 h-4" />
             <span>Créer un Nouveau Bon</span>

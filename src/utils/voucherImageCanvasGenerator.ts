@@ -36,6 +36,23 @@ export async function generateVoucherCanvas(
     console.warn('QR Code generation skipped in canvas:', err);
   }
 
+  // Load Brand Logo Image
+  let logoImage: HTMLImageElement | null = null;
+  try {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.src = '/logo.png';
+    await new Promise<void>((resolve) => {
+      img.onload = () => {
+        logoImage = img;
+        resolve();
+      };
+      img.onerror = () => resolve();
+    });
+  } catch (err) {
+    console.warn('Logo image loading skipped:', err);
+  }
+
   // Dimensions (High Definition Canvas: 1000px width)
   const width = 1000;
   const padding = 36;
@@ -83,19 +100,34 @@ export async function generateVoucherCanvas(
   ctx.fillStyle = '#ea580c';
   ctx.fillRect(padding, curY + headerHeight - 6, contentWidth, 6);
 
-  // ── Brand Logo Badge (Orange Square) ──
+  // ── Brand Logo Badge (Orange/Dark Square with Image or LT) ──
   const logoSize = 64;
   const logoX = padding + 24;
   const logoY = curY + 24;
-  ctx.fillStyle = '#ea580c';
-  roundRect(ctx, logoX, logoY, logoSize, logoSize, 14);
-  ctx.fill();
 
-  ctx.fillStyle = '#ffffff';
-  ctx.font = '900 28px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('LT', logoX + logoSize / 2, logoY + logoSize / 2 + 1);
+  if (logoImage) {
+    ctx.save();
+    ctx.fillStyle = '#020617';
+    roundRect(ctx, logoX, logoY, logoSize, logoSize, 14);
+    ctx.fill();
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.clip();
+    // draw image scaled cleanly
+    ctx.drawImage(logoImage, logoX + 2, logoY + 2, logoSize - 4, logoSize - 4);
+    ctx.restore();
+  } else {
+    ctx.fillStyle = '#ea580c';
+    roundRect(ctx, logoX, logoY, logoSize, logoSize, 14);
+    ctx.fill();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '900 28px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('LT', logoX + logoSize / 2, logoY + logoSize / 2 + 1);
+  }
 
   // ── Brand Name & Tagline ──
   ctx.textAlign = 'left';

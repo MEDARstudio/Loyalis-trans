@@ -93,8 +93,8 @@ export const VoucherPhotoViewerModal: React.FC<VoucherPhotoViewerModalProps> = (
   };
 
   return (
-    <div className={`fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-slate-950/90 backdrop-blur-md overflow-hidden ${isFullscreen ? 'p-0' : ''}`}>
-      <div className={`relative w-full max-w-5xl bg-slate-900 text-white rounded-2xl shadow-2xl border border-slate-700 overflow-hidden flex flex-col ${isFullscreen ? 'h-full max-h-full rounded-none border-0' : 'h-[90vh] max-h-[850px]'}`}>
+    <div className={`fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-slate-950/95 overflow-hidden ${isFullscreen ? 'p-0' : ''}`}>
+      <div className={`relative w-full max-w-5xl bg-slate-900 text-white rounded-2xl shadow-xl border border-slate-700 overflow-hidden flex flex-col ${isFullscreen ? 'h-full max-h-full rounded-none border-0' : 'h-[90vh] max-h-[850px]'}`}>
         
         {/* Header */}
         <div className="px-5 py-3.5 bg-slate-950 border-b border-slate-800 flex items-center justify-between gap-3 shrink-0">
@@ -133,7 +133,7 @@ export const VoucherPhotoViewerModal: React.FC<VoucherPhotoViewerModalProps> = (
         </div>
 
         {/* Tab Navigation */}
-        <div className="px-5 py-2 bg-slate-900/90 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2 shrink-0">
+        <div className="px-5 py-2 bg-slate-900 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2 shrink-0">
           <div className="flex items-center gap-2">
             <button
               onClick={() => {
@@ -142,7 +142,7 @@ export const VoucherPhotoViewerModal: React.FC<VoucherPhotoViewerModalProps> = (
               }}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
                 activeTab === 'BON_REEL'
-                  ? 'bg-orange-600 text-white shadow-md shadow-orange-600/30'
+                  ? 'bg-orange-600 text-white shadow-sm'
                   : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'
               }`}
             >
@@ -162,7 +162,7 @@ export const VoucherPhotoViewerModal: React.FC<VoucherPhotoViewerModalProps> = (
               }}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
                 activeTab === 'PARCEL_CASE'
-                  ? 'bg-orange-600 text-white shadow-md shadow-orange-600/30'
+                  ? 'bg-orange-600 text-white shadow-sm'
                   : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'
               }`}
             >
@@ -236,13 +236,13 @@ export const VoucherPhotoViewerModal: React.FC<VoucherPhotoViewerModalProps> = (
                 <>
                   <button
                     onClick={handlePrevPhoto}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-slate-900/80 hover:bg-orange-600 border border-slate-700 hover:border-orange-500 text-white shadow-xl backdrop-blur-sm transition-all"
+                    className="absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-slate-900/90 hover:bg-orange-600 border border-slate-700 hover:border-orange-500 text-white shadow-sm transition-all"
                   >
                     <ChevronLeft className="w-6 h-6" />
                   </button>
                   <button
                     onClick={handleNextPhoto}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-slate-900/80 hover:bg-orange-600 border border-slate-700 hover:border-orange-500 text-white shadow-xl backdrop-blur-sm transition-all"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-slate-900/90 hover:bg-orange-600 border border-slate-700 hover:border-orange-500 text-white shadow-sm transition-all"
                   >
                     <ChevronRight className="w-6 h-6" />
                   </button>

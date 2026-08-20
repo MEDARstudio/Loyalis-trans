@@ -260,14 +260,14 @@ export const VoucherShareModal: React.FC<VoucherShareModalProps> = ({
   return (
     <div 
       id="voucher-share-modal"
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/85 backdrop-blur-md overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/85 overflow-y-auto"
     >
-      <div className="relative w-full max-w-3xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden my-auto flex flex-col max-h-[94vh]">
+      <div className="relative w-full max-w-3xl bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden my-auto flex flex-col max-h-[94vh]">
         
         {/* Top Header Bar */}
         <div className="px-5 sm:px-6 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800 sticky top-0 z-30">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center font-black text-lg text-white shadow-lg shadow-emerald-600/30">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-600 flex items-center justify-center font-black text-lg text-white shadow-sm">
               <MessageSquare className="w-5 h-5" />
             </div>
             <div>
@@ -303,7 +303,7 @@ export const VoucherShareModal: React.FC<VoucherShareModalProps> = ({
               onClick={() => setActiveTab('whatsapp')}
               className={`px-3.5 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer ${
                 activeTab === 'whatsapp'
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
+                  ? 'bg-emerald-600 text-white shadow-sm'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
@@ -629,7 +629,7 @@ export const VoucherShareModal: React.FC<VoucherShareModalProps> = ({
               </div>
 
               {/* 4. Main Prominent WhatsApp Action Bar */}
-              <div className="bg-gradient-to-r from-emerald-600 to-green-600 rounded-2xl p-4 text-white shadow-lg shadow-emerald-600/25 space-y-3">
+              <div className="bg-emerald-700 rounded-2xl p-4 text-white shadow-sm space-y-3">
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                   <div>
                     <h3 className="text-sm sm:text-base font-black tracking-tight flex items-center gap-2">
@@ -648,7 +648,7 @@ export const VoucherShareModal: React.FC<VoucherShareModalProps> = ({
                       type="button"
                       onClick={handleDirectPackShare}
                       disabled={isSharingPack}
-                      className="px-4 py-2.5 bg-white text-emerald-800 hover:bg-emerald-50 font-black text-xs uppercase tracking-wider rounded-xl flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer active:scale-95"
+                      className="px-4 py-2.5 bg-white text-emerald-800 hover:bg-emerald-50 font-black text-xs uppercase tracking-wider rounded-xl flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer active:scale-95"
                       title="Partage direct complet avec photos et bon"
                     >
                       <Share2 className="w-4 h-4 text-emerald-700" />
@@ -693,7 +693,7 @@ export const VoucherShareModal: React.FC<VoucherShareModalProps> = ({
                     id="btn-download-hd-png"
                     onClick={handleDownloadImage}
                     disabled={isExportingImage}
-                    className="px-3.5 py-1.5 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white font-black text-xs rounded-xl flex items-center gap-1.5 shadow-md shadow-orange-600/20 transition-all cursor-pointer"
+                    className="px-3.5 py-1.5 bg-orange-600 hover:bg-orange-700 text-white font-black text-xs rounded-xl flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
                   >
                     <Download className="w-3.5 h-3.5" />
                     <span>{isExportingImage ? 'Génération...' : 'Télécharger PNG HD'}</span>
@@ -746,8 +746,18 @@ export const VoucherShareModal: React.FC<VoucherShareModalProps> = ({
                     <div className="bg-slate-950 text-white px-4 sm:px-5 py-3 border-b-2 border-orange-500 relative overflow-hidden">
                       <div className="flex items-center justify-between gap-3 relative z-10">
                         <div className="flex items-center gap-2.5">
-                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 text-white flex items-center justify-center font-black text-lg shadow-md shadow-orange-500/30 border border-orange-400/30 shrink-0">
-                            LT
+                          <div className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-700 flex items-center justify-center p-0.5 shadow-sm shrink-0 overflow-hidden">
+                            <img 
+                              src="/logo.png" 
+                              alt="Logo" 
+                              className="w-full h-full object-contain" 
+                              onError={(e) => {
+                                (e.currentTarget as HTMLElement).style.display = 'none';
+                                if (e.currentTarget.parentElement) {
+                                  e.currentTarget.parentElement.innerHTML = '<span class="font-black text-orange-500 text-sm">LT</span>';
+                                }
+                              }}
+                            />
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
@@ -1184,10 +1194,10 @@ export const VoucherShareModal: React.FC<VoucherShareModalProps> = ({
       {/* Photo Enlarge Modal if previewing single photo */}
       {previewPhotoModal && (
         <div 
-          className="fixed inset-0 z-60 bg-black/90 backdrop-blur-md flex items-center justify-center p-4"
+          className="fixed inset-0 z-60 bg-black/95 flex items-center justify-center p-4"
           onClick={() => setPreviewPhotoModal(null)}
         >
-          <div className="relative max-w-2xl max-h-[85vh] bg-slate-900 rounded-2xl overflow-hidden shadow-2xl p-2" onClick={e => e.stopPropagation()}>
+          <div className="relative max-w-2xl max-h-[85vh] bg-slate-900 rounded-2xl overflow-hidden shadow-xl p-2" onClick={e => e.stopPropagation()}>
             <button
               onClick={() => setPreviewPhotoModal(null)}
               className="absolute top-4 right-4 p-2 rounded-full bg-black/70 text-white hover:bg-black cursor-pointer"

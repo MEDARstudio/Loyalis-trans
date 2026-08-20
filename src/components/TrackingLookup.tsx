@@ -125,7 +125,7 @@ export const TrackingLookup: React.FC<TrackingLookupProps> = ({
               </div>
               <button
                 type="submit"
-                className="px-6 py-3.5 bg-orange-500 hover:bg-orange-600 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg shadow-orange-500/30 flex items-center justify-center gap-2 transition-colors"
+                className="px-6 py-3.5 bg-orange-600 hover:bg-orange-700 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-sm flex items-center justify-center gap-2 transition-colors cursor-pointer"
               >
                 <Search className="w-4 h-4" />
                 <span>Rechercher</span>

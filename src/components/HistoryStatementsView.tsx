@@ -351,7 +351,7 @@ export const HistoryStatementsView: React.FC<HistoryStatementsViewProps> = ({
       <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-5">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-orange-500 text-white flex items-center justify-center font-black shadow-lg shadow-orange-500/25">
+            <div className="w-12 h-12 rounded-2xl bg-orange-500 text-white flex items-center justify-center font-black shadow-sm">
               <History className="w-6 h-6" />
             </div>
             <div>
@@ -374,7 +374,7 @@ export const HistoryStatementsView: React.FC<HistoryStatementsViewProps> = ({
             <button
               id="btn-open-monthly-statement-pdf"
               onClick={() => setIsMonthlyPDFModalOpen(true)}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-black uppercase tracking-wider transition-all shadow-md shadow-orange-600/25 cursor-pointer"
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-black uppercase tracking-wider transition-all shadow-sm cursor-pointer"
             >
               <FileText className="w-4 h-4" />
               <span>Relevé Mensuel PDF</span>

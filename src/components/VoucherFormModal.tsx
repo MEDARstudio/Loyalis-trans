@@ -605,13 +605,13 @@ export const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-950/80 backdrop-blur-sm overflow-y-auto">
-      <div className="relative w-full max-w-4xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden my-auto max-h-[92vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-950/85 overflow-y-auto">
+      <div className="relative w-full max-w-4xl bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden my-auto max-h-[92vh] flex flex-col">
         
         {/* Modal Header */}
         <div className="px-6 py-4 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-slate-700/80 flex items-center justify-between text-white sticky top-0 z-20">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-orange-600 flex items-center justify-center shadow-md shadow-orange-600/30 font-black text-lg">
+            <div className="w-10 h-10 rounded-xl bg-orange-600 flex items-center justify-center font-black text-lg shadow-sm">
               LT
             </div>
             <div>
@@ -1405,7 +1405,7 @@ export const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
               <div className="flex items-center gap-2.5">
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold ${
                   isExternalTransport 
-                    ? 'bg-amber-500 text-white shadow-md shadow-amber-500/30' 
+                    ? 'bg-amber-500 text-white shadow-sm' 
                     : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
                 }`}>
                   <Truck className="w-4 h-4" />
@@ -1727,7 +1727,7 @@ export const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-between p-2.5">
                       <div className="flex items-center justify-between">
-                        <span className="font-mono text-[10px] bg-black/75 backdrop-blur-sm text-white px-2 py-0.5 rounded border border-white/20 font-bold">
+                        <span className="font-mono text-[10px] bg-black/85 text-white px-2 py-0.5 rounded border border-white/20 font-bold">
                           {bonReelPhoto.name}
                         </span>
                         <button
@@ -1751,7 +1751,7 @@ export const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
                               setPreviewPhotoTarget(bonReelPhoto);
                               setPhotoPreviewModalOpen(true);
                             }}
-                            className="px-2.5 py-1 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white rounded-lg text-xs font-bold flex items-center gap-1 transition-all"
+                            className="px-2.5 py-1 bg-white/25 hover:bg-white/35 text-white rounded-lg text-xs font-bold flex items-center gap-1 transition-all"
                           >
                             <Eye className="w-3.5 h-3.5" />
                             <span>Voir HD</span>
@@ -1975,7 +1975,7 @@ export const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
               type="button"
               disabled={isSubmitting}
               onClick={() => handleFormSubmit()}
-              className="px-5 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-sm shadow-md shadow-orange-600/30 flex items-center gap-2 transition-all"
+              className="px-5 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-sm shadow-sm flex items-center gap-2 transition-all cursor-pointer"
             >
               <Save className="w-4 h-4" />
               <span>{isSubmitting ? 'Enregistrement...' : 'Enregistrer le Bon'}</span>

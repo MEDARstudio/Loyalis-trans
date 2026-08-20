@@ -229,7 +229,7 @@ export const DatabaseView: React.FC = () => {
 
             <button
               onClick={handleDownloadBackup}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/20 transition-all cursor-pointer"
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-sm transition-all cursor-pointer"
             >
               <Download className="w-3.5 h-3.5" />
               <span>Sauvegarder en JSON</span>
@@ -271,7 +271,7 @@ export const DatabaseView: React.FC = () => {
               onClick={() => setActiveSubTab('supabase')}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
                 activeSubTab === 'supabase'
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
+                  ? 'bg-emerald-600 text-white shadow-sm'
                   : 'bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800'
               }`}
             >
@@ -283,7 +283,7 @@ export const DatabaseView: React.FC = () => {
               onClick={() => setActiveSubTab('tables')}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
                 activeSubTab === 'tables'
-                  ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
+                  ? 'bg-orange-500 text-white shadow-sm'
                   : 'bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800'
               }`}
             >
@@ -295,7 +295,7 @@ export const DatabaseView: React.FC = () => {
               onClick={() => setActiveSubTab('sql')}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
                 activeSubTab === 'sql'
-                  ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
+                  ? 'bg-orange-500 text-white shadow-sm'
                   : 'bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800'
               }`}
             >
@@ -399,7 +399,7 @@ export const DatabaseView: React.FC = () => {
               <div className="flex items-center gap-3 pt-2">
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-orange-500/20 cursor-pointer"
+                  className="px-5 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-sm cursor-pointer"
                 >
                   <Check className="w-4 h-4" />
                   <span>Enregistrer & Connecter</span>
@@ -458,7 +458,7 @@ export const DatabaseView: React.FC = () => {
                 <button
                   onClick={handleSyncToSupabase}
                   disabled={syncingAll}
-                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-emerald-600/30 cursor-pointer"
+                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-sm cursor-pointer"
                 >
                   <RefreshCw className={`w-4 h-4 ${syncingAll ? 'animate-spin' : ''}`} />
                   <span>{syncingAll ? 'Synchronisation...' : 'Envoyer les Bons vers Supabase'}</span>

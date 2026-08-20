@@ -117,8 +117,8 @@ export const DatabaseExplorerModal: React.FC<DatabaseExplorerModalProps> = ({ is
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-slate-950/85 backdrop-blur-md animate-fadeIn">
-      <div className="bg-slate-900 border border-slate-700 w-full max-w-6xl max-h-[92vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-100">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-slate-950/90 animate-fadeIn">
+      <div className="bg-slate-900 border border-slate-700 w-full max-w-6xl max-h-[92vh] rounded-2xl shadow-xl flex flex-col overflow-hidden text-slate-100">
         
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between gap-4">
@@ -206,7 +206,7 @@ export const DatabaseExplorerModal: React.FC<DatabaseExplorerModalProps> = ({ is
               onClick={() => setActiveTab('tables')}
               className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
                 activeTab === 'tables'
-                  ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
+                  ? 'bg-orange-500 text-white shadow-sm'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800'
               }`}
             >
@@ -217,7 +217,7 @@ export const DatabaseExplorerModal: React.FC<DatabaseExplorerModalProps> = ({ is
               onClick={() => setActiveTab('sql')}
               className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
                 activeTab === 'sql'
-                  ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
+                  ? 'bg-orange-500 text-white shadow-sm'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800'
               }`}
             >

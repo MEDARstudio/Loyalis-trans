@@ -168,16 +168,16 @@ export const MonthlyStatementPDFModal: React.FC<MonthlyStatementPDFModalProps> =
   return (
     <div 
       id="monthly-statement-pdf-modal"
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/85 backdrop-blur-md overflow-y-auto print:p-0 print:bg-white print:static"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/85 overflow-y-auto print:p-0 print:bg-white print:static"
     >
-      <div className="relative w-full max-w-5xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden my-auto max-h-[96vh] flex flex-col print:max-h-none print:shadow-none print:border-none print:rounded-none">
+      <div className="relative w-full max-w-5xl bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden my-auto max-h-[96vh] flex flex-col print:max-h-none print:shadow-none print:border-none print:rounded-none">
         
         {/* Top Sticky Toolbar */}
         <div className="px-5 py-3.5 bg-slate-900 text-white flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 print:hidden sticky top-0 z-30">
           
           {/* Title & Month Selector Controls */}
           <div className="flex flex-wrap items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-orange-600 flex items-center justify-center font-black text-white shadow-md shadow-orange-600/30">
+            <div className="w-10 h-10 rounded-xl bg-orange-600 flex items-center justify-center font-black text-white shadow-sm">
               <FileText className="w-5 h-5" />
             </div>
             
@@ -255,7 +255,7 @@ export const MonthlyStatementPDFModal: React.FC<MonthlyStatementPDFModalProps> =
               id="btn-download-monthly-pdf"
               onClick={handleDownloadPDF}
               disabled={isExportingPDF}
-              className="px-4 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-black text-xs shadow-md shadow-orange-600/30 flex items-center gap-1.5 transition-all cursor-pointer"
+              className="px-4 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-black text-xs shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
             >
               <Download className="w-3.5 h-3.5" />
               <span>{isExportingPDF ? 'Génération du PDF...' : 'Télécharger PDF'}</span>
@@ -303,8 +303,18 @@ export const MonthlyStatementPDFModal: React.FC<MonthlyStatementPDFModalProps> =
               
               <div className="space-y-1 max-w-md">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-orange-600 text-white font-black text-2xl flex items-center justify-center shadow-lg shadow-orange-600/30">
-                    LT
+                  <div className="w-12 h-12 rounded-2xl bg-slate-950 border border-slate-700 flex items-center justify-center p-1 shadow-sm overflow-hidden shrink-0">
+                    <img 
+                      src="/logo.png" 
+                      alt="Logo" 
+                      className="w-full h-full object-contain" 
+                      onError={(e) => {
+                        (e.currentTarget as HTMLElement).style.display = 'none';
+                        if (e.currentTarget.parentElement) {
+                          e.currentTarget.parentElement.innerHTML = '<span class="font-black text-orange-500 text-lg">LT</span>';
+                        }
+                      }}
+                    />
                   </div>
                   <div>
                     <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950 leading-none uppercase">
