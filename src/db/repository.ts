@@ -355,9 +355,7 @@ export async function getVouchers(filters?: {
     try {
       const rows = await db.select().from(vouchersTable).orderBy(desc(vouchersTable.createdAt));
       vouchers = rows.map(mapRowToVoucher);
-      if (vouchers.length > 0) {
-        memoryVouchers = vouchers;
-      }
+      memoryVouchers = vouchers;
     } catch (error) {
       vouchers = [...memoryVouchers];
     }
@@ -734,15 +732,22 @@ export async function validateVoucher(
 
 export async function deleteVoucher(idOrTracking: string): Promise<boolean> {
   const existing = await getVoucherByIdOrTracking(idOrTracking);
-  if (!existing) return false;
-
-  memoryVouchers = memoryVouchers.filter(v => v.id !== existing.id && v.trackingNumber !== existing.trackingNumber);
+  
+  memoryVouchers = memoryVouchers.filter(v => v.id !== idOrTracking && v.trackingNumber !== idOrTracking && (existing ? v.id !== existing.id && v.trackingNumber !== existing.trackingNumber : true));
 
   if (db && isDatabaseConfigured()) {
     try {
-      await db.delete(vouchersTable).where(eq(vouchersTable.id, existing.id));
+      if (existing) {
+        await db.delete(vouchersTable).where(
+          or(eq(vouchersTable.id, existing.id), eq(vouchersTable.trackingNumber, existing.trackingNumber))
+        );
+      } else {
+        await db.delete(vouchersTable).where(
+          or(eq(vouchersTable.id, idOrTracking), eq(vouchersTable.trackingNumber, idOrTracking))
+        );
+      }
     } catch (error) {
-      // Memory handles
+      console.warn('DB delete error:', error);
     }
   }
   return true;

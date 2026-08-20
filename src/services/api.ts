@@ -116,14 +116,14 @@ function saveLocalSettings(settings: CompanySettings): void {
 }
 
 function getLocalVouchers(): Voucher[] {
-  if (typeof window === 'undefined') return DEFAULT_SAMPLE_VOUCHERS;
+  if (typeof window === 'undefined') return [];
   try {
     const raw = localStorage.getItem(STORAGE_KEY_VOUCHERS);
     if (!raw) {
-      localStorage.setItem(STORAGE_KEY_VOUCHERS, JSON.stringify(DEFAULT_SAMPLE_VOUCHERS));
-      return DEFAULT_SAMPLE_VOUCHERS;
+      return [];
     }
     const parsed: Voucher[] = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
     // Purge obsolete test samples 1, 2, 3
     const filtered = parsed.filter(
       v =>
@@ -134,16 +134,9 @@ function getLocalVouchers(): Voucher[] {
         v.trackingNumber !== '0000002' &&
         v.trackingNumber !== '0000003'
     );
-    if (filtered.length === 0) {
-      localStorage.setItem(STORAGE_KEY_VOUCHERS, JSON.stringify(DEFAULT_SAMPLE_VOUCHERS));
-      return DEFAULT_SAMPLE_VOUCHERS;
-    }
-    if (filtered.length !== parsed.length) {
-      localStorage.setItem(STORAGE_KEY_VOUCHERS, JSON.stringify(filtered));
-    }
     return filtered;
   } catch {
-    return DEFAULT_SAMPLE_VOUCHERS;
+    return [];
   }
 }
 
@@ -305,7 +298,7 @@ export const api = {
     // 2. Try Direct Supabase
     try {
       const supVouchers = await supabaseApi.getVouchers();
-      if (supVouchers && supVouchers.length > 0) {
+      if (supVouchers !== null) {
         saveLocalVouchers(supVouchers);
         let list = supVouchers;
         if (params?.status && params.status !== 'ALL') {

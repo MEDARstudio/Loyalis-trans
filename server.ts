@@ -171,7 +171,7 @@ async function startServer() {
   });
 
   // Vouchers: Batch Status Update
-  app.post('/api/vouchers/batch-status', async (req: Request, res: Response) => {
+  const handleBatchStatus = async (req: Request, res: Response) => {
     try {
       const { ids, status } = req.body;
       if (!Array.isArray(ids) || !status) {
@@ -185,10 +185,12 @@ async function startServer() {
       console.error('API /api/vouchers/batch-status error:', err);
       res.status(500).json({ error: 'Erreur lors de la mise à jour groupée' });
     }
-  });
+  };
+  app.post('/api/vouchers/batch-status', handleBatchStatus);
+  app.post('/api/vouchers/batch/status', handleBatchStatus);
 
   // Vouchers: Batch Direct Validate (Amine Admin)
-  app.post('/api/vouchers/batch-validate', async (req: Request, res: Response) => {
+  const handleBatchValidate = async (req: Request, res: Response) => {
     try {
       const { ids, validatedBy } = req.body;
       if (!Array.isArray(ids)) {
@@ -202,10 +204,12 @@ async function startServer() {
       console.error('API /api/vouchers/batch-validate error:', err);
       res.status(500).json({ error: 'Erreur lors de la validation groupée' });
     }
-  });
+  };
+  app.post('/api/vouchers/batch-validate', handleBatchValidate);
+  app.post('/api/vouchers/batch/validate', handleBatchValidate);
 
   // Vouchers: Batch Delete
-  app.post('/api/vouchers/batch-delete', async (req: Request, res: Response) => {
+  const handleBatchDelete = async (req: Request, res: Response) => {
     try {
       const { ids } = req.body;
       if (!Array.isArray(ids)) {
@@ -219,7 +223,9 @@ async function startServer() {
       console.error('API /api/vouchers/batch-delete error:', err);
       res.status(500).json({ error: 'Erreur lors de la suppression groupée' });
     }
-  });
+  };
+  app.post('/api/vouchers/batch-delete', handleBatchDelete);
+  app.post('/api/vouchers/batch/delete', handleBatchDelete);
 
   // Stats
   app.get('/api/stats', async (req: Request, res: Response) => {

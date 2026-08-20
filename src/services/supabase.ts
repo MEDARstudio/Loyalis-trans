@@ -315,14 +315,18 @@ export const supabaseApi = {
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error || !data) return null;
+      if (error) {
+        console.warn('[Supabase] getVouchers error:', error);
+        return null;
+      }
+      if (!data) return [];
 
       return data.map(row => ({
         id: row.id,
         trackingNumber: row.tracking_number,
         sequenceNumber: row.sequence_number,
         date: row.date,
-        time: row.time,
+        time: row.time || '',
         createdAt: row.created_at,
         updatedAt: row.updated_at,
         sender: {
@@ -383,16 +387,16 @@ export const supabaseApi = {
         time: v.time || '',
         created_at: v.createdAt || new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        sender_name: v.sender.name,
-        sender_cin: v.sender.cin || '',
-        sender_phone: v.sender.phone,
-        sender_address: v.sender.address || '',
-        recipient_name: v.recipient.name,
-        recipient_destination: v.recipient.destination,
-        recipient_phone: v.recipient.phone,
-        recipient_address: v.recipient.address || '',
-        departure_city: v.departureCity,
-        destination_city: v.destinationCity,
+        sender_name: v.sender?.name || '',
+        sender_cin: v.sender?.cin || '',
+        sender_phone: v.sender?.phone || '',
+        sender_address: v.sender?.address || '',
+        recipient_name: v.recipient?.name || '',
+        recipient_destination: v.recipient?.destination || '',
+        recipient_phone: v.recipient?.phone || '',
+        recipient_address: v.recipient?.address || '',
+        departure_city: v.departureCity || '',
+        destination_city: v.destinationCity || '',
         items: v.items || [],
         total_colis: v.totalColis || 1,
         total_weight_kg: v.totalWeightKg || 0,
@@ -407,18 +411,18 @@ export const supabaseApi = {
         agency_name: v.agencyName || '',
         created_by_agent: v.createdByAgent || '',
         is_validated: v.isValidated || false,
-        validated_by: v.validatedBy || '',
+        validated_by: v.validatedBy || null,
         validated_at: v.validatedAt || null,
         validation_notes: v.validationNotes || '',
-        bonReelPhoto: v.bonReelPhoto || null,
-        casePhotos: v.casePhotos || [],
-        isExternalTransport: v.isExternalTransport || false,
-        externalCarrierName: v.externalCarrierName || '',
-        externalCarrierPhone: v.externalCarrierPhone || '',
-        externalCarrierVoucherRef: v.externalCarrierVoucherRef || '',
-        externalCost: v.externalCost || 0,
-        externalPaymentStatus: v.externalPaymentStatus || 'PAID',
-        externalNotes: v.externalNotes || ''
+        bon_reel_photo: v.bonReelPhoto || null,
+        case_photos: v.casePhotos || [],
+        is_external_transport: v.isExternalTransport || false,
+        external_carrier_name: v.externalCarrierName || '',
+        external_carrier_phone: v.externalCarrierPhone || '',
+        external_carrier_voucher_ref: v.externalCarrierVoucherRef || '',
+        external_cost: v.externalCost || 0,
+        external_payment_status: v.externalPaymentStatus || 'PAID',
+        external_notes: v.externalNotes || ''
       };
 
       const { error } = await client.from('vouchers').upsert(row);
@@ -437,8 +441,12 @@ export const supabaseApi = {
     const client = getSupabaseClient();
     if (!client) return false;
     try {
-      const { error } = await client.from('vouchers').delete().eq('id', id);
-      return !error;
+      const { error } = await client.from('vouchers').delete().or(`id.eq.${id},tracking_number.eq.${id}`);
+      if (error) {
+        console.warn('[Supabase] deleteVoucher error:', error);
+        return false;
+      }
+      return true;
     } catch {
       return false;
     }
@@ -446,10 +454,14 @@ export const supabaseApi = {
 
   async batchDelete(ids: string[]): Promise<boolean> {
     const client = getSupabaseClient();
-    if (!client) return false;
+    if (!client || ids.length === 0) return false;
     try {
       const { error } = await client.from('vouchers').delete().in('id', ids);
-      return !error;
+      if (error) {
+        console.warn('[Supabase] batchDelete error:', error);
+        return false;
+      }
+      return true;
     } catch {
       return false;
     }
