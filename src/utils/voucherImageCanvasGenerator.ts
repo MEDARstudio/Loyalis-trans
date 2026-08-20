@@ -491,6 +491,38 @@ export async function downloadVoucherCanvasImage(
 }
 
 /**
+ * Returns Canvas voucher as Blob
+ */
+export async function getVoucherCanvasBlob(
+  voucher: Voucher,
+  settings: CompanySettings
+): Promise<Blob | null> {
+  try {
+    const canvas = await generateVoucherCanvas(voucher, settings);
+    return new Promise<Blob | null>((resolve) => {
+      canvas.toBlob((b) => resolve(b), 'image/png', 0.98);
+    });
+  } catch (err) {
+    console.error('Failed to get voucher canvas blob:', err);
+    return null;
+  }
+}
+
+/**
+ * Returns Canvas voucher as File object (for Web Share API)
+ */
+export async function getVoucherCanvasFile(
+  voucher: Voucher,
+  settings: CompanySettings,
+  fileName?: string
+): Promise<File | null> {
+  const blob = await getVoucherCanvasBlob(voucher, settings);
+  if (!blob) return null;
+  const name = fileName || `Bon_Transport_${voucher.trackingNumber}.png`;
+  return new File([blob], name, { type: 'image/png' });
+}
+
+/**
  * Copies the Canvas 2D voucher image directly to clipboard
  */
 export async function copyVoucherCanvasImageToClipboard(

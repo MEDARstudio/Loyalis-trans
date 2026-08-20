@@ -4,64 +4,74 @@ import { jsPDF } from 'jspdf';
 import { CompanySettings, Voucher } from '../types';
 import { formatCurrency, formatDate, getStatusBadge } from './formatters';
 import { downloadVoucherNativePDF } from './voucherPdfGenerator';
-import { downloadVoucherCanvasImage, copyVoucherCanvasImageToClipboard } from './voucherImageCanvasGenerator';
+import { 
+  downloadVoucherCanvasImage, 
+  copyVoucherCanvasImageToClipboard,
+  getVoucherCanvasFile
+} from './voucherImageCanvasGenerator';
 
+/**
+ * Concise & high-impact summary text for WhatsApp, SMS & client messages (NO tracking link)
+ */
 export function buildVoucherSummaryText(voucher: Voucher, settings: CompanySettings): string {
   const currency = settings.currency || 'DH';
-  const status = getStatusBadge(voucher.status).label;
-  const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
-  const trackingUrl = `${currentOrigin}/?track=${encodeURIComponent(voucher.trackingNumber)}`;
-
-  const itemsList = voucher.items
-    .map((it, idx) => `  ${idx + 1}. ${it.quantity}x ${it.nature} (${it.weightKg} kg)${it.notes ? ` [${it.notes}]` : ''}`)
-    .join('\n');
-
+  
   let paymentText = '';
   const pStatus = voucher.paymentStatus || voucher.paymentMethod;
   if (pStatus === 'AVANCE') {
-    paymentText = `• Règlement : 🟡 Avance de ${formatCurrency(voucher.advanceAmount || 0, currency)}\n• Reste à payer à livraison : 🔴 *${formatCurrency(voucher.remainingAmount !== undefined ? voucher.remainingAmount : (voucher.totalPrice - (voucher.advanceAmount || 0)), currency)}*`;
+    const remaining = voucher.remainingAmount !== undefined 
+      ? voucher.remainingAmount 
+      : Math.max(0, voucher.totalPrice - (voucher.advanceAmount || 0));
+    paymentText = `• Règlement : 🟡 Avance ${formatCurrency(voucher.advanceAmount || 0, currency)} (Reste à payer : *${formatCurrency(remaining, currency)}*)`;
   } else if (pStatus === 'NON_PAYE' || pStatus === 'A_LA_LIVRAISON') {
-    paymentText = `• Règlement : 🔴 *Non Payé* (À régler à la livraison : *${formatCurrency(voucher.totalPrice, currency)}*)`;
+    paymentText = `• Règlement : 🔴 *À régler à la livraison* (*${formatCurrency(voucher.totalPrice, currency)}*)`;
   } else {
-    paymentText = `• Règlement : 🟢 *Payé / Réglé* (${formatCurrency(voucher.totalPrice, currency)})`;
+    paymentText = `• Règlement : 🟢 *Payé* (${formatCurrency(voucher.totalPrice, currency)})`;
   }
 
-  return `📦 *LOYALIS TRANS - BON DE TRANSPORT BAGAGES*
-━━━━━━━━━━━━━━━━━━━━━━━━━━
-🏷️ *N° Suivi :* ${voucher.trackingNumber}
+  const senderCity = voucher.departureCity || settings.defaultDepartureCity || 'Casablanca';
+  const recipientCity = voucher.recipient.destination || voucher.destinationCity || 'Destination';
+
+  return `📦 *LOYALIS TRANS - BON N° ${voucher.trackingNumber}*
+━━━━━━━━━━━━━━━━━━━━━━━
 📅 *Date :* ${formatDate(voucher.date)}
-📍 *Trajet :* ${voucher.departureCity || settings.defaultDepartureCity || 'Casablanca'} ➔ ${voucher.recipient.destination || voucher.destinationCity}
-🚦 *Statut Colis :* ${status}
+📍 *Trajet :* ${senderCity} ➔ ${recipientCity}
 
-👤 *EXPÉDITEUR :*
-• Nom : ${voucher.sender.name}
-• Tél : ${voucher.sender.phone}${voucher.sender.cin ? `\n• CIN : ${voucher.sender.cin}` : ''}
-${voucher.sender.address ? `• Adresse : ${voucher.sender.address}` : ''}
+👤 *Expéditeur :* ${voucher.sender.name} (${voucher.sender.phone})
+🎯 *Destinataire :* ${voucher.recipient.name} (${voucher.recipient.phone})
 
-🎯 *DESTINATAIRE :*
-• Nom : ${voucher.recipient.name}
-• Destination : ${voucher.recipient.destination || voucher.destinationCity}
-• Tél : ${voucher.recipient.phone}
-${voucher.recipient.address ? `• Adresse : ${voucher.recipient.address}` : ''}
-
-🧳 *DÉTAIL DES BAGAGES :*
-${itemsList}
-
-📊 *RÉCAPITULATIF & RÈGLEMENT :*
-• Total Colis : *${voucher.totalColis} pièce(s)*
-• Poids Total : *${voucher.totalWeightKg} kg*
-• Montant Total : *${formatCurrency(voucher.totalPrice, currency)}*
+🧳 *Bagages :* ${voucher.totalColis} colis • ${voucher.totalWeightKg} kg
+💰 *Total :* *${formatCurrency(voucher.totalPrice, currency)}*
 ${paymentText}
-${voucher.notes ? `• Remarques : ${voucher.notes}\n` : ''}
-🔍 *Suivi en direct du colis :*
-${trackingUrl}
-
-📞 *Loyalis Trans Contact :* ${settings.phone1 || '+212 600-000000'} ${settings.phone2 ? `| ${settings.phone2}` : ''}
-━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+${voucher.notes ? `📝 *Note :* ${voucher.notes}\n` : ''}
+📞 *Loyalis Trans :* ${settings.phone1 || '+212 600-000000'}${settings.phone2 ? ` | ${settings.phone2}` : ''}
+━━━━━━━━━━━━━━━━━━━━━━━`;
 }
 
-export function shareViaWhatsApp(voucher: Voucher, settings: CompanySettings, targetPhone?: string) {
-  const text = buildVoucherSummaryText(voucher, settings);
+/**
+ * Helper to convert Base64/DataURL to a File object
+ */
+export async function dataUrlToFile(dataUrl: string, fileName: string): Promise<File | null> {
+  try {
+    const res = await fetch(dataUrl);
+    const blob = await res.blob();
+    return new File([blob], fileName, { type: blob.type || 'image/jpeg' });
+  } catch (err) {
+    console.warn('Failed to convert dataUrl to File:', err);
+    return null;
+  }
+}
+
+/**
+ * Direct WhatsApp Link Launcher
+ */
+export function shareViaWhatsApp(
+  voucher: Voucher, 
+  settings: CompanySettings, 
+  targetPhone?: string,
+  customMessage?: string
+) {
+  const text = customMessage || buildVoucherSummaryText(voucher, settings);
   const encoded = encodeURIComponent(text);
   
   let cleanPhone = (targetPhone || voucher.recipient.phone || voucher.sender.phone || '').replace(/[^\d+]/g, '');
@@ -76,6 +86,84 @@ export function shareViaWhatsApp(voucher: Voucher, settings: CompanySettings, ta
     : `https://api.whatsapp.com/send?text=${encoded}`;
 
   window.open(url, '_blank');
+}
+
+/**
+ * High-end Web Share API Pack (Transfers generated HD Voucher Image + Parcel Photos directly to WhatsApp or native sharing)
+ */
+export async function shareDirectVoucherPack(
+  voucher: Voucher,
+  settings: CompanySettings,
+  options: {
+    targetPhone?: string;
+    includeVoucherImage?: boolean;
+    includeCasePhotos?: boolean;
+    customMessage?: string;
+  } = {}
+): Promise<{ success: boolean; method: 'web-share' | 'whatsapp-url' | 'fallback' }> {
+  const message = options.customMessage || buildVoucherSummaryText(voucher, settings);
+  const files: File[] = [];
+
+  // 1. Generate & Attach HD Voucher Image
+  if (options.includeVoucherImage !== false) {
+    try {
+      const voucherFile = await getVoucherCanvasFile(voucher, settings, `Bon_LoyalisTrans_${voucher.trackingNumber}.png`);
+      if (voucherFile) {
+        files.push(voucherFile);
+      }
+    } catch (err) {
+      console.warn('Voucher image generation for share failed:', err);
+    }
+  }
+
+  // 2. Attach Parcel Case Photos if requested
+  if (options.includeCasePhotos) {
+    if (voucher.casePhotos && voucher.casePhotos.length > 0) {
+      for (let i = 0; i < voucher.casePhotos.length; i++) {
+        const photo = voucher.casePhotos[i];
+        const dataUrl = typeof photo === 'string' ? photo : photo?.dataUrl;
+        if (dataUrl) {
+          const photoFile = await dataUrlToFile(dataUrl, `Colis_${voucher.trackingNumber}_Photo${i + 1}.jpg`);
+          if (photoFile) {
+            files.push(photoFile);
+          }
+        }
+      }
+    }
+    if (voucher.bonReelPhoto) {
+      const dataUrl = typeof voucher.bonReelPhoto === 'string' ? voucher.bonReelPhoto : voucher.bonReelPhoto?.dataUrl;
+      if (dataUrl) {
+        const bonFile = await dataUrlToFile(dataUrl, `BonReel_${voucher.trackingNumber}.jpg`);
+        if (bonFile) {
+          files.push(bonFile);
+        }
+      }
+    }
+  }
+
+  // Check if native Web Share with files is supported
+  const nav = navigator as any;
+  if (nav && nav.canShare && files.length > 0) {
+    try {
+      if (nav.canShare({ files })) {
+        await nav.share({
+          title: `Bon Loyalis Trans N° ${voucher.trackingNumber}`,
+          text: message,
+          files: files
+        });
+        return { success: true, method: 'web-share' };
+      }
+    } catch (shareErr: any) {
+      if (shareErr.name === 'AbortError') {
+        return { success: false, method: 'web-share' };
+      }
+      console.warn('Native share with files failed, falling back to direct WhatsApp link:', shareErr);
+    }
+  }
+
+  // Fallback to direct WhatsApp URL opening
+  shareViaWhatsApp(voucher, settings, options.targetPhone, message);
+  return { success: true, method: 'whatsapp-url' };
 }
 
 export function shareViaEmail(voucher: Voucher, settings: CompanySettings) {

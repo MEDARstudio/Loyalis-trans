@@ -244,14 +244,14 @@ export const VoucherDetailModal: React.FC<VoucherDetailModalProps> = ({
               <span>Imprimer Bon</span>
             </button>
 
-            {/* Share */}
+            {/* WhatsApp / Share */}
             <button
               onClick={() => onOpenShare(voucher)}
-              className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition-all"
-              title="Partager par WhatsApp ou SMS"
+              className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
+              title="Envoyer directement par WhatsApp avec photos de colis et bon"
             >
-              <Share2 className="w-3.5 h-3.5" />
-              <span>Partager</span>
+              <MessageSquare className="w-3.5 h-3.5" />
+              <span>WhatsApp</span>
             </button>
 
             {/* Edit */}
