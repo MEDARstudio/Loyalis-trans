@@ -163,12 +163,12 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* Desktop Navigation Tabs (Visible on screens >= 1024px) */}
-          <nav className="hidden lg:flex items-center gap-1 bg-slate-950/60 p-1 rounded-xl border border-slate-800">
+          {/* Desktop & Tablet Navigation Tabs (Visible on screens >= 768px) */}
+          <nav className="hidden md:flex items-center gap-1 bg-slate-950/60 p-1 rounded-xl border border-slate-800">
             <button
               id="nav-tab-vouchers"
               onClick={() => handleTabSelect('list')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-xs uppercase tracking-wider transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-lg font-bold text-xs uppercase tracking-wider transition-all cursor-pointer ${
                 activeTab === 'list'
                   ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800'
@@ -188,7 +188,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               id="nav-tab-tracking"
               onClick={() => handleTabSelect('tracking')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-xs uppercase tracking-wider transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-lg font-bold text-xs uppercase tracking-wider transition-all cursor-pointer ${
                 activeTab === 'tracking'
                   ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800'
@@ -201,7 +201,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               id="nav-tab-stats"
               onClick={() => handleTabSelect('stats')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-xs uppercase tracking-wider transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-lg font-bold text-xs uppercase tracking-wider transition-all cursor-pointer ${
                 activeTab === 'stats'
                   ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800'
@@ -214,7 +214,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               id="nav-tab-history"
               onClick={() => handleTabSelect('history')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-xs uppercase tracking-wider transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-lg font-bold text-xs uppercase tracking-wider transition-all cursor-pointer ${
                 activeTab === 'history'
                   ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800'
@@ -351,11 +351,11 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="sm:hidden">Nouveau</span>
             </button>
 
-            {/* Mobile / Tablet Menu Button */}
+            {/* Mobile Menu Button for Settings & Extra Options */}
             <button
               id="btn-header-mobile-menu"
               onClick={() => setIsMobileMenuOpen(true)}
-              className="lg:hidden p-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-200 hover:text-white active:bg-slate-750 transition-colors cursor-pointer flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 shrink-0"
+              className="md:hidden p-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-200 hover:text-white active:bg-slate-750 transition-colors cursor-pointer flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 shrink-0"
               aria-label="Ouvrir le menu de navigation"
             >
               <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -364,11 +364,73 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
         </div>
+
+        {/* Mobile Sub-Header Navigation Bar (Top-integrated, non-obtrusive, leaves bottom 100% free) */}
+        <div className="md:hidden border-t border-slate-800/80 bg-slate-950/80 px-2 py-1.5 flex items-center justify-around gap-1">
+          <button
+            id="mobile-nav-vouchers"
+            onClick={() => handleTabSelect('list')}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              activeTab === 'list'
+                ? 'bg-orange-500 text-white shadow-xs'
+                : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <Package className="w-3.5 h-3.5" />
+            <span>Bons</span>
+            {vouchersCount > 0 && (
+              <span className={`text-[10px] font-black px-1.5 py-0.2 rounded-full ${
+                activeTab === 'list' ? 'bg-orange-700 text-white' : 'bg-slate-800 text-slate-300'
+              }`}>
+                {vouchersCount}
+              </span>
+            )}
+          </button>
+
+          <button
+            id="mobile-nav-tracking"
+            onClick={() => handleTabSelect('tracking')}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              activeTab === 'tracking'
+                ? 'bg-orange-500 text-white shadow-xs'
+                : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <Search className="w-3.5 h-3.5" />
+            <span>Suivi</span>
+          </button>
+
+          <button
+            id="mobile-nav-stats"
+            onClick={() => handleTabSelect('stats')}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              activeTab === 'stats'
+                ? 'bg-orange-500 text-white shadow-xs'
+                : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <BarChart3 className="w-3.5 h-3.5" />
+            <span>Stats</span>
+          </button>
+
+          <button
+            id="mobile-nav-history"
+            onClick={() => handleTabSelect('history')}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              activeTab === 'history'
+                ? 'bg-orange-500 text-white shadow-xs'
+                : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <History className="w-3.5 h-3.5" />
+            <span>Relevés</span>
+          </button>
+        </div>
       </header>
 
       {/* Structured Mobile Drawer Navigation Menu */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden flex flex-col justify-end bg-black/75 backdrop-blur-sm animate-fadeIn">
+        <div className="fixed inset-0 z-50 md:hidden flex flex-col justify-end bg-black/75 backdrop-blur-sm animate-fadeIn">
           {/* Backdrop dismiss */}
           <div 
             className="flex-1 w-full"

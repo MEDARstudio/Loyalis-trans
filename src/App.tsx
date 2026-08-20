@@ -392,7 +392,7 @@ export default function App() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3.5 sm:px-6 lg:px-8 py-4 sm:py-6 pb-24 lg:pb-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3.5 sm:px-6 lg:px-8 py-4 sm:py-6 pb-12">
         
         {activeTab === 'list' && (
           <VouchersList
@@ -459,66 +459,6 @@ export default function App() {
         )}
 
       </main>
-
-      {/* Modern Mobile Bottom Navigation Bar (Fixed for thumb access on mobile & tablet < lg) */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 shadow-2xl px-2 py-1.5 flex items-center justify-around">
-        <button
-          onClick={() => setActiveTab('list')}
-          className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all cursor-pointer ${
-            activeTab === 'list' ? 'text-orange-500 font-black' : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <div className="relative">
-            <Package className="w-5 h-5" />
-            {vouchers.length > 0 && (
-              <span className="absolute -top-1 -right-2 bg-orange-600 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center">
-                {vouchers.length > 99 ? '99+' : vouchers.length}
-              </span>
-            )}
-          </div>
-          <span className="text-[10px] uppercase font-bold mt-1 tracking-wider">Bons</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('tracking')}
-          className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all cursor-pointer ${
-            activeTab === 'tracking' ? 'text-orange-500 font-black' : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Search className="w-5 h-5" />
-          <span className="text-[10px] uppercase font-bold mt-1 tracking-wider">Suivi</span>
-        </button>
-
-        {/* Central Prominent Add Action */}
-        <button
-          onClick={handleOpenCreateModal}
-          className="flex flex-col items-center justify-center -mt-5 bg-gradient-to-tr from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400 text-white p-3 rounded-full shadow-lg shadow-orange-500/40 active:scale-95 transition-all cursor-pointer"
-          title="Créer un nouveau bon"
-          aria-label="Nouveau bon"
-        >
-          <Plus className="w-6 h-6 stroke-[2.5]" />
-        </button>
-
-        <button
-          onClick={() => setActiveTab('stats')}
-          className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all cursor-pointer ${
-            activeTab === 'stats' ? 'text-orange-500 font-black' : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <BarChart3 className="w-5 h-5" />
-          <span className="text-[10px] uppercase font-bold mt-1 tracking-wider">Stats</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('history')}
-          className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all cursor-pointer ${
-            activeTab === 'history' ? 'text-orange-500 font-black' : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <History className="w-5 h-5" />
-          <span className="text-[10px] uppercase font-bold mt-1 tracking-wider">Relevés</span>
-        </button>
-      </nav>
 
       {/* MODALS */}
       {/* 0. Voucher Detailed View Modal */}
