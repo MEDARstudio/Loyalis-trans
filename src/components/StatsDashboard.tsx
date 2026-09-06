@@ -34,10 +34,13 @@ import {
   ChevronDown,
   ChevronUp,
   Share2,
-  ExternalLink
+  ExternalLink,
+  Calculator,
+  Info
 } from 'lucide-react';
 import { CompanySettings, Voucher, VoucherStats, VoucherStatus } from '../types';
 import { formatCurrency, formatDate, getPaymentStatusInfo, getStatusBadge } from '../utils/formatters';
+import { CalculationDetailModal, CalculationTarget } from './CalculationDetailModal';
 import * as XLSX from 'xlsx';
 
 export type TimePeriodPreset = 
@@ -58,6 +61,7 @@ interface StatsDashboardProps {
   settings: CompanySettings;
   onOpenExcelExport: () => void;
   onFilterByStatus: (status: string) => void;
+  onOpenVoucherDetail?: (voucher: Voucher) => void;
 }
 
 // Helpers for date calculations
@@ -90,7 +94,8 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
   vouchers,
   settings,
   onOpenExcelExport,
-  onFilterByStatus
+  onFilterByStatus,
+  onOpenVoucherDetail
 }) => {
   const currency = settings.currency || 'DH';
 
@@ -117,6 +122,15 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
   const [selectedCarrierFilter, setSelectedCarrierFilter] = useState<string>('ALL');
   const [selectedCarrierPaymentFilter, setSelectedCarrierPaymentFilter] = useState<'ALL' | 'PAID' | 'UNPAID'>('ALL');
   const [showSubcontractedTable, setShowSubcontractedTable] = useState<boolean>(true);
+
+  // Calculation Transparency & Audit Modal State
+  const [calculationTarget, setCalculationTarget] = useState<CalculationTarget | null>(null);
+  const [isCalculationModalOpen, setIsCalculationModalOpen] = useState<boolean>(false);
+
+  const handleOpenCalculation = (target: CalculationTarget) => {
+    setCalculationTarget(target);
+    setIsCalculationModalOpen(true);
+  };
 
   // Compute active date range based on selectedPreset and navOffset
   const { startDate, endDate, periodLabel, previousStartDate, previousEndDate } = useMemo(() => {
@@ -307,17 +321,33 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
     const dayOfWeekDistribution: number[] = new Array(7).fill(0); // 0 = Dim, 1 = Lun, ...
 
     filteredVouchers.forEach(v => {
-      const price = v.totalPrice || 0;
+      // Robust calculation for price
+      const itemsPrice = v.items?.reduce((acc, it) => acc + (Number(it.price) || 0), 0) || 0;
+      const price = (v.totalPrice !== undefined && v.totalPrice !== null && !isNaN(Number(v.totalPrice)))
+        ? Number(v.totalPrice)
+        : itemsPrice;
+
+      // Robust calculation for weight
+      const itemsWeight = v.items?.reduce((acc, it) => acc + (Number(it.weightKg) || 0), 0) || 0;
+      const weight = (v.totalWeightKg !== undefined && v.totalWeightKg !== null && Number(v.totalWeightKg) > 0)
+        ? Number(v.totalWeightKg)
+        : itemsWeight;
+
+      // Robust calculation for colis
+      const itemsColisCount = v.items?.reduce((acc, it) => acc + (Number(it.quantity) || 1), 0) || 0;
+      const colis = (v.totalColis !== undefined && v.totalColis !== null && Number(v.totalColis) > 0)
+        ? Number(v.totalColis)
+        : (itemsColisCount > 0 ? itemsColisCount : 1);
+
       totalRevenue += price;
-      totalWeight += v.totalWeightKg || 0;
-      const itemsColisCount = v.items?.reduce((acc, it) => acc + (it.quantity || 1), 0) || 1;
-      totalColis += v.totalColis || itemsColisCount;
+      totalWeight += weight;
+      totalColis += colis;
 
       // Subcontracting / External Carrier check
-      const isExternal = v.isExternalTransport === true || (v.externalCost && v.externalCost > 0) || Boolean(v.externalCarrierName && v.externalCarrierName.trim());
+      const isExternal = v.isExternalTransport === true || (Number(v.externalCost) > 0) || Boolean(v.externalCarrierName && v.externalCarrierName.trim());
       if (isExternal) {
         totalExternalVouchersCount++;
-        const extCost = v.externalCost || 0;
+        const extCost = Number(v.externalCost) || 0;
         totalExternalCost += extCost;
         totalExternalRevenue += price;
         externalVouchersList.push(v);
@@ -366,9 +396,9 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
       // Payments
       const paymentInfo = getPaymentStatusInfo(
         v.paymentStatus || v.paymentMethod,
-        v.advanceAmount || 0,
+        Number(v.advanceAmount) || 0,
         price,
-        v.remainingAmount
+        v.remainingAmount !== undefined ? Number(v.remainingAmount) : undefined
       );
       totalPaid += paymentInfo.advance;
       totalRemaining += paymentInfo.remaining;
@@ -378,14 +408,14 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
       const dest = v.destinationCity || v.recipient.destination || 'Autre';
       if (!destinations[dest]) destinations[dest] = { count: 0, weight: 0, revenue: 0 };
       destinations[dest].count++;
-      destinations[dest].weight += v.totalWeightKg || 0;
+      destinations[dest].weight += weight;
       destinations[dest].revenue += price;
 
       // Departure
       const dep = v.departureCity || settings.defaultDepartureCity || 'Casablanca';
       if (!departureAgencies[dep]) departureAgencies[dep] = { count: 0, weight: 0, revenue: 0 };
       departureAgencies[dep].count++;
-      departureAgencies[dep].weight += v.totalWeightKg || 0;
+      departureAgencies[dep].weight += weight;
       departureAgencies[dep].revenue += price;
 
       // Agent
@@ -413,11 +443,11 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
     });
 
     const totalVouchers = filteredVouchers.length;
-    const avgWeight = totalVouchers > 0 ? Math.round((totalWeight / totalVouchers) * 10) / 10 : 0;
+    const avgWeight = totalVouchers > 0 ? Number((totalWeight / totalVouchers).toFixed(2)) : 0;
     const avgRevenue = totalVouchers > 0 ? Math.round(totalRevenue / totalVouchers) : 0;
-    const avgColis = totalVouchers > 0 ? Math.round((totalColis / totalVouchers) * 10) / 10 : 0;
-    const collectionRate = totalRevenue > 0 ? Math.round((totalPaid / totalRevenue) * 100) : 100;
-    const deliveryRate = totalVouchers > 0 ? Math.round((deliveredCount / totalVouchers) * 100) : 0;
+    const avgColis = totalVouchers > 0 ? Number((totalColis / totalVouchers).toFixed(1)) : 0;
+    const collectionRate = totalRevenue > 0 ? Math.min(100, Math.round((totalPaid / totalRevenue) * 100)) : 100;
+    const deliveryRate = totalVouchers > 0 ? Math.min(100, Math.round((deliveredCount / totalVouchers) * 100)) : 0;
 
     // Subcontracting net margin & profit calculations
     const netSubcontractedMargin = totalExternalRevenue - totalExternalCost;
@@ -475,10 +505,24 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
     const totalVouchers = previousPeriodVouchers.length;
 
     previousPeriodVouchers.forEach(v => {
-      totalRevenue += v.totalPrice || 0;
-      totalWeight += v.totalWeightKg || 0;
-      const itemsColisCount = v.items?.reduce((acc, it) => acc + (it.quantity || 1), 0) || 1;
-      totalColis += v.totalColis || itemsColisCount;
+      const itemsPrice = v.items?.reduce((acc, it) => acc + (Number(it.price) || 0), 0) || 0;
+      const price = (v.totalPrice !== undefined && v.totalPrice !== null && !isNaN(Number(v.totalPrice)))
+        ? Number(v.totalPrice)
+        : itemsPrice;
+
+      const itemsWeight = v.items?.reduce((acc, it) => acc + (Number(it.weightKg) || 0), 0) || 0;
+      const weight = (v.totalWeightKg !== undefined && v.totalWeightKg !== null && Number(v.totalWeightKg) > 0)
+        ? Number(v.totalWeightKg)
+        : itemsWeight;
+
+      const itemsColisCount = v.items?.reduce((acc, it) => acc + (Number(it.quantity) || 1), 0) || 0;
+      const colis = (v.totalColis !== undefined && v.totalColis !== null && Number(v.totalColis) > 0)
+        ? Number(v.totalColis)
+        : (itemsColisCount > 0 ? itemsColisCount : 1);
+
+      totalRevenue += price;
+      totalWeight += weight;
+      totalColis += colis;
     });
 
     return {
@@ -508,39 +552,44 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
   const chartData = useMemo(() => {
     const diffDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
     
-    // Grouping strategy: If <= 35 days, group by Day. If > 35 days and <= 180 days, group by Week. If > 180 days, group by Month.
+    // Grouping strategy: If <= 35 days, group by Day. If > 35 days, group by Month.
     if (diffDays <= 35) {
       // By Day
-      const daysMap: Record<string, { label: string; count: number; revenue: number; weight: number }> = {};
+      const daysMap: Record<string, { label: string; dateKey: string; count: number; revenue: number; weight: number }> = {};
       
       // Initialize all days in the range
       const curr = new Date(startDate);
       while (curr <= endDate) {
         const key = formatDateToInput(curr);
         const label = curr.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
-        daysMap[key] = { label, count: 0, revenue: 0, weight: 0 };
+        daysMap[key] = { label, dateKey: key, count: 0, revenue: 0, weight: 0 };
         curr.setDate(curr.getDate() + 1);
       }
 
       filteredVouchers.forEach(v => {
         const key = formatDateToInput(parseVoucherDate(v));
         if (daysMap[key]) {
+          const itemsPrice = v.items?.reduce((acc, it) => acc + (Number(it.price) || 0), 0) || 0;
+          const price = (v.totalPrice !== undefined && v.totalPrice !== null && !isNaN(Number(v.totalPrice))) ? Number(v.totalPrice) : itemsPrice;
+          const itemsWeight = v.items?.reduce((acc, it) => acc + (Number(it.weightKg) || 0), 0) || 0;
+          const weight = (v.totalWeightKg !== undefined && v.totalWeightKg !== null && Number(v.totalWeightKg) > 0) ? Number(v.totalWeightKg) : itemsWeight;
+
           daysMap[key].count++;
-          daysMap[key].revenue += v.totalPrice || 0;
-          daysMap[key].weight += v.totalWeightKg || 0;
+          daysMap[key].revenue += price;
+          daysMap[key].weight += weight;
         }
       });
 
       return Object.values(daysMap);
     } else {
       // By Month
-      const monthsMap: Record<string, { label: string; count: number; revenue: number; weight: number }> = {};
+      const monthsMap: Record<string, { label: string; dateKey: string; count: number; revenue: number; weight: number }> = {};
       
       const curr = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
       while (curr <= endDate) {
         const key = `${curr.getFullYear()}-${String(curr.getMonth() + 1).padStart(2, '0')}`;
         const label = curr.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
-        monthsMap[key] = { label, count: 0, revenue: 0, weight: 0 };
+        monthsMap[key] = { label, dateKey: key, count: 0, revenue: 0, weight: 0 };
         curr.setMonth(curr.getMonth() + 1);
       }
 
@@ -548,9 +597,14 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
         const vd = parseVoucherDate(v);
         const key = `${vd.getFullYear()}-${String(vd.getMonth() + 1).padStart(2, '0')}`;
         if (monthsMap[key]) {
+          const itemsPrice = v.items?.reduce((acc, it) => acc + (Number(it.price) || 0), 0) || 0;
+          const price = (v.totalPrice !== undefined && v.totalPrice !== null && !isNaN(Number(v.totalPrice))) ? Number(v.totalPrice) : itemsPrice;
+          const itemsWeight = v.items?.reduce((acc, it) => acc + (Number(it.weightKg) || 0), 0) || 0;
+          const weight = (v.totalWeightKg !== undefined && v.totalWeightKg !== null && Number(v.totalWeightKg) > 0) ? Number(v.totalWeightKg) : itemsWeight;
+
           monthsMap[key].count++;
-          monthsMap[key].revenue += v.totalPrice || 0;
-          monthsMap[key].weight += v.totalWeightKg || 0;
+          monthsMap[key].revenue += price;
+          monthsMap[key].weight += weight;
         }
       });
 
@@ -821,14 +875,37 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
 
       </div>
 
+      {/* Transparency & Audit Explanation Banner */}
+      <div className="bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800/60 rounded-2xl p-3 sm:p-4 flex items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-2.5 text-orange-950 dark:text-orange-200 font-medium">
+          <div className="w-8 h-8 rounded-xl bg-orange-500 text-white flex items-center justify-center shrink-0">
+            <Calculator className="w-4 h-4" />
+          </div>
+          <div>
+            <span className="font-bold block text-slate-900 dark:text-white">Transparence des Calculs & Audit Intégral</span>
+            <span className="text-slate-600 dark:text-slate-300 text-[11px]">
+              Cliquez sur n'importe quel indicateur, carte financière, statut, jour ou transporteur pour inspecter la formule mathématique et voir la liste détaillée des bons.
+            </span>
+          </div>
+        </div>
+        <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-orange-700 dark:text-orange-300 bg-orange-100 dark:bg-orange-900/60 px-2.5 py-1 rounded-lg shrink-0">
+          <Info className="w-3 h-3" />
+          Cliquez pour détails
+        </span>
+      </div>
+
       {/* Primary KPI Grid (4 Dynamic Cards with Bold Numbers and Period Comparisons) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
         {/* Total Vouchers (Hero Slate Card with Orange Accent) */}
-        <div className="bg-slate-900 text-white p-5 rounded-2xl border-2 border-slate-800 shadow-lg space-y-2 relative overflow-hidden">
+        <div 
+          onClick={() => handleOpenCalculation({ type: 'TOTAL_VOUCHERS', title: "Total Expéditions (Bons émis)" })}
+          className="bg-slate-900 text-white p-5 rounded-2xl border-2 border-slate-800 shadow-lg space-y-2 relative overflow-hidden cursor-pointer hover:border-orange-500 hover:ring-2 hover:ring-orange-500/20 transition-all group"
+          title="Cliquez pour voir le détail du calcul des expéditions"
+        >
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Expéditions</span>
-            <div className="w-8 h-8 rounded-lg bg-orange-500/20 text-orange-400 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-orange-500/20 text-orange-400 flex items-center justify-center group-hover:bg-orange-500 group-hover:text-white transition-colors">
               <Package className="w-4 h-4" />
             </div>
           </div>
@@ -838,7 +915,9 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
           </div>
           
           <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-800">
-            <span className="text-slate-400 font-medium">Sur cette période</span>
+            <span className="text-slate-400 font-medium group-hover:text-orange-300 transition-colors flex items-center gap-1">
+              Détail calcul ➔
+            </span>
             {selectedPreset !== 'ALL' && (
               <span className={`inline-flex items-center gap-0.5 font-bold font-mono text-[11px] ${
                 trends.vouchers >= 0 ? 'text-emerald-400' : 'text-rose-400'
@@ -851,10 +930,14 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
         </div>
 
         {/* Total Revenue */}
-        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
+        <div 
+          onClick={() => handleOpenCalculation({ type: 'TOTAL_REVENUE', title: "Chiffre d'Affaires Total Facturé" })}
+          className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-2 cursor-pointer hover:border-emerald-500 hover:ring-2 hover:ring-emerald-500/20 transition-all group"
+          title="Cliquez pour voir le détail du calcul du Chiffre d'Affaires"
+        >
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Chiffre d'Affaires</span>
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-colors">
               <Coins className="w-4 h-4" />
             </div>
           </div>
@@ -864,7 +947,9 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
           </div>
           
           <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100 dark:border-slate-800">
-            <span className="text-slate-500 font-semibold">Moy. : ~{formatCurrency(periodMetrics.avgRevenue, currency)}/bon</span>
+            <span className="text-slate-500 font-semibold group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors flex items-center gap-1">
+              Moy. : ~{formatCurrency(periodMetrics.avgRevenue, currency)}/bon ➔
+            </span>
             {selectedPreset !== 'ALL' && (
               <span className={`inline-flex items-center gap-0.5 font-bold font-mono text-[11px] ${
                 trends.revenue >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
@@ -877,10 +962,14 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
         </div>
 
         {/* Total Weight */}
-        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
+        <div 
+          onClick={() => handleOpenCalculation({ type: 'TOTAL_WEIGHT', title: "Poids Total Transporté" })}
+          className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-2 cursor-pointer hover:border-blue-500 hover:ring-2 hover:ring-blue-500/20 transition-all group"
+          title="Cliquez pour voir le détail du calcul du poids"
+        >
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Poids Total</span>
-            <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-blue-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
               <Scale className="w-4 h-4" />
             </div>
           </div>
@@ -890,7 +979,9 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
           </div>
           
           <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100 dark:border-slate-800">
-            <span className="text-slate-500 font-semibold">Moy. : ~{periodMetrics.avgWeight} kg/bon</span>
+            <span className="text-slate-500 font-semibold group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors flex items-center gap-1">
+              Moy. : ~{periodMetrics.avgWeight} kg/bon ➔
+            </span>
             {selectedPreset !== 'ALL' && (
               <span className={`inline-flex items-center gap-0.5 font-bold font-mono text-[11px] ${
                 trends.weight >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-rose-600 dark:text-rose-400'
@@ -903,10 +994,14 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
         </div>
 
         {/* Total Colis Count */}
-        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
+        <div 
+          onClick={() => handleOpenCalculation({ type: 'TOTAL_COLIS', title: "Nombre Total de Colis" })}
+          className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-2 cursor-pointer hover:border-purple-500 hover:ring-2 hover:ring-purple-500/20 transition-all group"
+          title="Cliquez pour voir le détail du calcul des colis"
+        >
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Nombre de Colis</span>
-            <div className="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-950/50 text-purple-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-950/50 text-purple-600 flex items-center justify-center group-hover:bg-purple-600 group-hover:text-white transition-colors">
               <Truck className="w-4 h-4" />
             </div>
           </div>
@@ -916,7 +1011,9 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
           </div>
           
           <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100 dark:border-slate-800">
-            <span className="text-slate-500 font-semibold">Moy. : ~{periodMetrics.avgColis} colis/bon</span>
+            <span className="text-slate-500 font-semibold group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors flex items-center gap-1">
+              Moy. : ~{periodMetrics.avgColis} colis/bon ➔
+            </span>
             <span className="text-xs font-bold text-purple-600 font-mono">
               Livrés : {periodMetrics.deliveryRate}%
             </span>
@@ -932,13 +1029,21 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
             <DollarSign className="w-4 h-4 text-emerald-600" />
             <span>Synthèse Financière & Recouvrement ({periodLabel})</span>
           </h3>
-          <div className="text-xs font-bold text-slate-500">
-            Taux d'encaissement : <strong className="text-emerald-600 font-mono text-sm">{periodMetrics.collectionRate}%</strong>
-          </div>
+          <button 
+            onClick={() => handleOpenCalculation({ type: 'TOTAL_BILLED', title: "Synthèse Globale du Recouvrement & Encaissements" })}
+            className="text-xs font-bold text-slate-500 hover:text-emerald-600 transition-colors cursor-pointer flex items-center gap-1"
+          >
+            Taux d'encaissement : <strong className="text-emerald-600 font-mono text-sm underline">{periodMetrics.collectionRate}%</strong>
+            <span className="text-[10px] text-slate-400">🔍</span>
+          </button>
         </div>
 
         {/* Progress Bar */}
-        <div className="w-full h-3 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden flex">
+        <div 
+          onClick={() => handleOpenCalculation({ type: 'TOTAL_BILLED', title: "Rapprochement Encaissé vs Reste à Recouvrer" })}
+          className="w-full h-3 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden flex cursor-pointer hover:ring-2 hover:ring-emerald-400 transition-all"
+          title="Cliquez pour voir le rapprochement financier complet"
+        >
           <div 
             className="bg-emerald-500 h-full transition-all duration-500" 
             style={{ width: `${periodMetrics.totalRevenue > 0 ? (periodMetrics.totalPaid / periodMetrics.totalRevenue) * 100 : 100}%` }}
@@ -954,15 +1059,26 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           
           {/* Montant Total Facturé */}
-          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
-            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">Total Facturé</span>
+          <div 
+            onClick={() => handleOpenCalculation({ type: 'TOTAL_BILLED', title: "Total Facturé aux Clients" })}
+            className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 cursor-pointer hover:border-slate-400 hover:ring-2 hover:ring-slate-300 dark:hover:ring-slate-700 transition-all group"
+            title="Cliquez pour voir la liste de facturation complète"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">Total Facturé</span>
+              <span className="text-[10px] text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200 font-bold">Détails ➔</span>
+            </div>
             <span className="text-xl font-black text-slate-900 dark:text-white font-mono mt-1 block">
               {formatCurrency(periodMetrics.totalRevenue, currency)}
             </span>
           </div>
 
           {/* Montant Réellement Encaissé */}
-          <div className="p-3.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50">
+          <div 
+            onClick={() => handleOpenCalculation({ type: 'TOTAL_PAID', title: "Montant Réellement Encaissé (Comptant & Acomptes)" })}
+            className="p-3.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 cursor-pointer hover:border-emerald-400 hover:ring-2 hover:ring-emerald-400/20 transition-all group"
+            title="Cliquez pour voir le détail des encaissements"
+          >
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 dark:text-emerald-300 block">Encaissé Réel</span>
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
@@ -970,11 +1086,18 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
             <span className="text-xl font-black text-emerald-900 dark:text-emerald-200 font-mono mt-1 block">
               {formatCurrency(periodMetrics.totalPaid, currency)}
             </span>
-            <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-medium">Comptant & Acomptes reçus</span>
+            <div className="flex items-center justify-between mt-1">
+              <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-medium">Comptant & Acomptes reçus</span>
+              <span className="text-[10px] text-emerald-600 font-bold group-hover:underline">Détails ➔</span>
+            </div>
           </div>
 
           {/* Reste à Recouvrer (À la livraison) */}
-          <div className="p-3.5 rounded-xl bg-rose-50/70 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/50">
+          <div 
+            onClick={() => handleOpenCalculation({ type: 'TOTAL_REMAINING', title: "Reste à Recouvrer (Créances en cours)" })}
+            className="p-3.5 rounded-xl bg-rose-50/70 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/50 cursor-pointer hover:border-rose-400 hover:ring-2 hover:ring-rose-400/20 transition-all group"
+            title="Cliquez pour voir les impayés et créances"
+          >
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-black uppercase tracking-wider text-rose-800 dark:text-rose-300 block">Reste à Recouvrer</span>
               <Clock className="w-3.5 h-3.5 text-rose-600" />
@@ -982,7 +1105,10 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
             <span className="text-xl font-black text-rose-900 dark:text-rose-200 font-mono mt-1 block">
               {formatCurrency(periodMetrics.totalRemaining, currency)}
             </span>
-            <span className="text-[10px] text-rose-700 dark:text-rose-400 font-medium">À encaisser à la livraison</span>
+            <div className="flex items-center justify-between mt-1">
+              <span className="text-[10px] text-rose-700 dark:text-rose-400 font-medium">À encaisser à la livraison</span>
+              <span className="text-[10px] text-rose-600 font-bold group-hover:underline">Détails ➔</span>
+            </div>
           </div>
 
         </div>
@@ -1036,9 +1162,16 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           
           {/* 1. Dépenses Totales Transporteurs Tiers */}
-          <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex flex-col justify-between">
+          <div 
+            onClick={() => handleOpenCalculation({ type: 'EXTERNAL_COST', title: "Dépenses Totales de Sous-Traitance Confrères" })}
+            className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex flex-col justify-between cursor-pointer hover:border-indigo-400 hover:ring-2 hover:ring-indigo-400/20 transition-all group"
+            title="Cliquez pour voir la liste des coûts de sous-traitance"
+          >
             <div>
-              <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block">Dépenses Sous-Traitance</span>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block">Dépenses Sous-Traitance</span>
+                <span className="text-[10px] text-indigo-500 font-bold group-hover:underline">Détails ➔</span>
+              </div>
               <span className="text-xl font-black text-slate-900 dark:text-white font-mono mt-1 block">
                 {formatCurrency(periodMetrics.totalExternalCost, currency)}
               </span>
@@ -1049,7 +1182,11 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
           </div>
 
           {/* 2. Dépenses Déjà Réglées */}
-          <div className="p-4 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 flex flex-col justify-between">
+          <div 
+            onClick={() => handleOpenCalculation({ type: 'EXTERNAL_PAID', title: "Dépenses Déjà Réglées aux Transporteurs Tiers" })}
+            className="p-4 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 flex flex-col justify-between cursor-pointer hover:border-emerald-400 hover:ring-2 hover:ring-emerald-400/20 transition-all group"
+            title="Cliquez pour voir les règlements effectués aux transporteurs"
+          >
             <div>
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 dark:text-emerald-300 block">Déjà Réglé</span>
@@ -1059,13 +1196,18 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
                 {formatCurrency(periodMetrics.totalExternalPaid, currency)}
               </span>
             </div>
-            <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-medium mt-2 block">
-              Payé / Quittancé aux transporteurs
-            </span>
+            <div className="flex items-center justify-between mt-2">
+              <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-medium">Payé / Quittancé aux transporteurs</span>
+              <span className="text-[10px] text-emerald-600 font-bold group-hover:underline">Détails ➔</span>
+            </div>
           </div>
 
           {/* 3. Dettes Fournisseurs (Reste à Payer) */}
-          <div className="p-4 rounded-xl bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 flex flex-col justify-between">
+          <div 
+            onClick={() => handleOpenCalculation({ type: 'EXTERNAL_UNPAID', title: "Dettes Fournisseurs (Reste à Payer aux Transporteurs)" })}
+            className="p-4 rounded-xl bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 flex flex-col justify-between cursor-pointer hover:border-amber-400 hover:ring-2 hover:ring-amber-400/20 transition-all group"
+            title="Cliquez pour voir les dettes et restes à payer aux transporteurs"
+          >
             <div>
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-black uppercase tracking-wider text-amber-800 dark:text-amber-300 block">Reste à Régler</span>
@@ -1075,13 +1217,18 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
                 {formatCurrency(periodMetrics.totalExternalUnpaid, currency)}
               </span>
             </div>
-            <span className="text-[10px] text-amber-700 dark:text-amber-400 font-medium mt-2 block">
-              Dettes en cours chez les sous-traitants
-            </span>
+            <div className="flex items-center justify-between mt-2">
+              <span className="text-[10px] text-amber-700 dark:text-amber-400 font-medium">Dettes en cours chez sous-traitants</span>
+              <span className="text-[10px] text-amber-600 font-bold group-hover:underline">Détails ➔</span>
+            </div>
           </div>
 
           {/* 4. Marge Nette Dégagée sur Sous-Traitance */}
-          <div className="p-4 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-900/50 flex flex-col justify-between">
+          <div 
+            onClick={() => handleOpenCalculation({ type: 'EXTERNAL_MARGIN', title: "Marge Nette Dégagée sur Sous-Traitance" })}
+            className="p-4 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-900/50 flex flex-col justify-between cursor-pointer hover:border-indigo-400 hover:ring-2 hover:ring-indigo-400/20 transition-all group"
+            title="Cliquez pour voir le calcul de la marge nette sous-traitance"
+          >
             <div>
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-black uppercase tracking-wider text-indigo-800 dark:text-indigo-300 block">Marge Sous-Traitance</span>
@@ -1099,7 +1246,11 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
           </div>
 
           {/* 5. Bénéfice Net Global Entreprise */}
-          <div className="p-4 rounded-xl bg-purple-50/70 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/50 flex flex-col justify-between">
+          <div 
+            onClick={() => handleOpenCalculation({ type: 'GLOBAL_NET_PROFIT', title: "Bénéfice Net Global de l'Entreprise" })}
+            className="p-4 rounded-xl bg-purple-50/70 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/50 flex flex-col justify-between cursor-pointer hover:border-purple-400 hover:ring-2 hover:ring-purple-400/20 transition-all group"
+            title="Cliquez pour voir le calcul du bénéfice net global"
+          >
             <div>
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-black uppercase tracking-wider text-purple-800 dark:text-purple-300 block">Bénéfice Net Global</span>
@@ -1130,28 +1281,36 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
             </span>
           </div>
 
-          <div className="w-full h-3 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden flex">
+          <div className="w-full h-3 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden flex cursor-pointer">
             <div 
-              className="bg-orange-500 h-full transition-all duration-500" 
+              onClick={() => handleOpenCalculation({ type: 'INTERNAL_FLEET', title: "Expéditions Réalisées en Flotte Propre Loyalis Trans" })}
+              className="bg-orange-500 h-full transition-all duration-500 hover:brightness-110" 
               style={{ width: `${periodMetrics.totalVouchers > 0 ? (periodMetrics.internalVouchersCount / periodMetrics.totalVouchers) * 100 : 100}%` }}
-              title={`Flotte Propre: ${periodMetrics.internalVouchersCount} bons (${formatCurrency(periodMetrics.internalRevenue, currency)})`}
+              title={`Flotte Propre: ${periodMetrics.internalVouchersCount} bons (${formatCurrency(periodMetrics.internalRevenue, currency)}) - Cliquez pour détails`}
             />
             <div 
-              className="bg-indigo-500 h-full transition-all duration-500" 
+              onClick={() => handleOpenCalculation({ type: 'EXTERNAL_FLEET', title: "Expéditions Confiées à des Confrères (Sous-Traitance)" })}
+              className="bg-indigo-500 h-full transition-all duration-500 hover:brightness-110" 
               style={{ width: `${periodMetrics.totalVouchers > 0 ? (periodMetrics.totalExternalVouchersCount / periodMetrics.totalVouchers) * 100 : 0}%` }}
-              title={`Sous-traitance: ${periodMetrics.totalExternalVouchersCount} bons (${formatCurrency(periodMetrics.totalExternalRevenue, currency)})`}
+              title={`Sous-traitance: ${periodMetrics.totalExternalVouchersCount} bons (${formatCurrency(periodMetrics.totalExternalRevenue, currency)}) - Cliquez pour détails`}
             />
           </div>
 
-          <div className="flex items-center justify-between text-[11px] text-slate-600 dark:text-slate-400 font-medium">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between text-[11px] text-slate-600 dark:text-slate-400 font-medium flex-wrap gap-2">
+            <button 
+              onClick={() => handleOpenCalculation({ type: 'INTERNAL_FLEET', title: "Expéditions Réalisées en Flotte Propre Loyalis Trans" })}
+              className="flex items-center gap-2 hover:text-orange-600 transition-colors text-left cursor-pointer"
+            >
               <span className="w-2.5 h-2.5 rounded-full bg-orange-500"></span>
-              <span><strong>Flotte Loyalis Trans :</strong> {periodMetrics.internalVouchersCount} bons ({formatCurrency(periodMetrics.internalRevenue, currency)})</span>
-            </div>
-            <div className="flex items-center gap-2">
+              <span><strong>Flotte Loyalis Trans :</strong> {periodMetrics.internalVouchersCount} bons ({formatCurrency(periodMetrics.internalRevenue, currency)}) 🔍</span>
+            </button>
+            <button 
+              onClick={() => handleOpenCalculation({ type: 'EXTERNAL_FLEET', title: "Expéditions Confiées à des Confrères (Sous-Traitance)" })}
+              className="flex items-center gap-2 hover:text-indigo-600 transition-colors text-left cursor-pointer"
+            >
               <span className="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
-              <span><strong>Sous-traitance Tiers :</strong> {periodMetrics.totalExternalVouchersCount} bons ({formatCurrency(periodMetrics.totalExternalRevenue, currency)}) - Coût: {formatCurrency(periodMetrics.totalExternalCost, currency)}</span>
-            </div>
+              <span><strong>Sous-traitance Tiers :</strong> {periodMetrics.totalExternalVouchersCount} bons ({formatCurrency(periodMetrics.totalExternalRevenue, currency)}) - Coût: {formatCurrency(periodMetrics.totalExternalCost, currency)} 🔍</span>
+            </button>
           </div>
         </div>
 
@@ -1177,10 +1336,15 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
                         : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/70 hover:border-slate-300'
                     }`}
                   >
-                    <div className="flex items-start justify-between gap-2">
+                    <div 
+                      onClick={() => handleOpenCalculation({ type: 'CARRIER', title: `Détail & Calculs Transporteur : ${carrier.name}`, extraData: { carrierName: carrier.name } })}
+                      className="flex items-start justify-between gap-2 cursor-pointer group"
+                      title="Cliquez pour voir le calcul détaillé et les bons de ce transporteur"
+                    >
                       <div>
-                        <h5 className="text-sm font-black text-slate-900 dark:text-white leading-tight">
+                        <h5 className="text-sm font-black text-slate-900 dark:text-white leading-tight group-hover:text-indigo-600 transition-colors flex items-center gap-1.5">
                           {carrier.name}
+                          <span className="text-[10px] text-indigo-500 font-bold opacity-0 group-hover:opacity-100 transition-opacity">🔍</span>
                         </h5>
                         {carrier.phones.length > 0 && (
                           <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
@@ -1194,7 +1358,11 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
                       </span>
                     </div>
 
-                    <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700/60 grid grid-cols-2 gap-2 text-xs">
+                    <div 
+                      onClick={() => handleOpenCalculation({ type: 'CARRIER', title: `Détail & Calculs Transporteur : ${carrier.name}`, extraData: { carrierName: carrier.name } })}
+                      className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700/60 grid grid-cols-2 gap-2 text-xs cursor-pointer hover:bg-slate-50/60 dark:hover:bg-slate-700/30 p-1 rounded-lg transition-colors"
+                      title="Cliquez pour voir le calcul détaillé"
+                    >
                       <div>
                         <span className="text-[10px] text-slate-400 uppercase font-bold block">Dépense Totale</span>
                         <span className="font-mono font-black text-slate-900 dark:text-white">
@@ -1221,7 +1389,15 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
                       </div>
                     </div>
 
-                    <div className="mt-3 pt-2 flex items-center justify-end">
+                    <div className="mt-3 pt-2 flex items-center justify-between gap-2 border-t border-slate-100 dark:border-slate-700/40">
+                      <button
+                        onClick={() => handleOpenCalculation({ type: 'CARRIER', title: `Détail & Calculs Transporteur : ${carrier.name}`, extraData: { carrierName: carrier.name } })}
+                        className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <Calculator className="w-3 h-3" />
+                        Détails calculs ➔
+                      </button>
+
                       <button
                         onClick={() => setSelectedCarrierFilter(isSelected ? 'ALL' : carrier.name)}
                         className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-lg transition-colors ${
@@ -1230,7 +1406,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
                             : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
                         }`}
                       >
-                        {isSelected ? 'Filtre actif (Cliquez pour désactiver)' : 'Filtrer ce transporteur'}
+                        {isSelected ? 'Filtre actif' : 'Filtrer'}
                       </button>
                     </div>
                   </div>
@@ -1461,16 +1637,23 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
                 return (
                   <div 
                     key={idx} 
-                    className="flex-1 min-w-[28px] sm:min-w-[36px] max-w-[50px] flex flex-col items-center justify-end h-full group relative"
+                    onClick={() => handleOpenCalculation({ 
+                      type: 'CHART_BAR', 
+                      title: `Détail & Bons du ${item.label}`, 
+                      extraData: { dateKey: item.dateKey, dateLabel: item.label } 
+                    })}
+                    className="flex-1 min-w-[28px] sm:min-w-[36px] max-w-[50px] flex flex-col items-center justify-end h-full group relative cursor-pointer"
+                    title={`Cliquez pour voir les ${item.count} bon(s) du ${item.label}`}
                   >
                     {/* Tooltip on Hover */}
-                    <div className="absolute -top-12 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none bg-slate-900 text-white text-[11px] font-mono py-1 px-2 rounded shadow-lg whitespace-nowrap z-20">
-                      <div className="font-bold">{item.label}</div>
+                    <div className="absolute -top-14 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none bg-slate-900 text-white text-[11px] font-mono py-1 px-2.5 rounded-lg shadow-xl whitespace-nowrap z-20 text-center">
+                      <div className="font-bold text-orange-400">{item.label}</div>
                       <div>
                         {chartMetric === 'REVENUE' && formatCurrency(item.revenue, currency)}
                         {chartMetric === 'COUNT' && `${item.count} bon(s)`}
                         {chartMetric === 'WEIGHT' && `${item.weight} kg`}
                       </div>
+                      <div className="text-[9px] text-slate-400 font-sans">Cliquez pour détails ➔</div>
                     </div>
 
                     {/* Value on top of bar if high enough */}
@@ -1482,7 +1665,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
 
                     {/* Bar Pill */}
                     <div 
-                      className={`w-full rounded-t-lg transition-all duration-300 ${barColor}`}
+                      className={`w-full rounded-t-lg transition-all duration-300 ${barColor} group-hover:brightness-110 group-hover:ring-2 group-hover:ring-orange-400/40`}
                       style={{ height: `${heightPercent}%` }}
                     />
 
@@ -1501,71 +1684,141 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
 
       {/* Status Breakdown Pipeline for this period */}
       <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-        <h3 className="text-xs font-black uppercase tracking-wider text-slate-500">
-          Répartition par État d'Acheminement ({periodLabel} • Cliquez pour filtrer la liste)
-        </h3>
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <h3 className="text-xs font-black uppercase tracking-wider text-slate-500">
+            Répartition par État d'Acheminement ({periodLabel})
+          </h3>
+          <span className="text-[11px] text-slate-400 font-medium">
+            Cliquez pour inspecter la formule de calcul et la liste des bons
+          </span>
+        </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
           
           {/* En attente */}
-          <button
-            onClick={() => onFilterByStatus('EN_ATTENTE')}
-            className="p-4 rounded-xl bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 text-left hover:ring-2 hover:ring-amber-400 transition-all cursor-pointer"
+          <div
+            onClick={() => handleOpenCalculation({ type: 'STATUS_PENDING', title: "Expéditions en attente d'expédition" })}
+            className="p-4 rounded-xl bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 text-left hover:ring-2 hover:ring-amber-400 hover:border-amber-400 transition-all cursor-pointer group"
+            title="Cliquez pour voir les détails des bons en attente"
           >
-            <span className="text-[10px] font-black uppercase tracking-wider text-amber-800 dark:text-amber-300 block">En attente</span>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black uppercase tracking-wider text-amber-800 dark:text-amber-300 block">En attente</span>
+              <span className="text-[10px] text-amber-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity">Détails ➔</span>
+            </div>
             <span className="text-2xl font-black text-amber-900 dark:text-amber-200 font-mono mt-1 block">
               {periodMetrics.pendingCount}
             </span>
-            <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 mt-1 block">À expédier</span>
-          </button>
+            <div className="flex items-center justify-between mt-1 text-[10px]">
+              <span className="font-bold text-amber-700 dark:text-amber-400">À expédier</span>
+              <button 
+                onClick={(e) => { e.stopPropagation(); onFilterByStatus('EN_ATTENTE'); }}
+                className="underline text-amber-800 dark:text-amber-300 font-semibold hover:text-amber-950"
+                title="Filtrer la liste principale"
+              >
+                Filtrer
+              </button>
+            </div>
+          </div>
 
           {/* En transit */}
-          <button
-            onClick={() => onFilterByStatus('EN_TRANSIT')}
-            className="p-4 rounded-xl bg-blue-50/70 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/50 text-left hover:ring-2 hover:ring-blue-400 transition-all cursor-pointer"
+          <div
+            onClick={() => handleOpenCalculation({ type: 'STATUS_IN_TRANSIT', title: "Expéditions en cours de transit routier" })}
+            className="p-4 rounded-xl bg-blue-50/70 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/50 text-left hover:ring-2 hover:ring-blue-400 hover:border-blue-400 transition-all cursor-pointer group"
+            title="Cliquez pour voir les détails des bons en transit"
           >
-            <span className="text-[10px] font-black uppercase tracking-wider text-blue-800 dark:text-blue-300 block">En transit</span>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black uppercase tracking-wider text-blue-800 dark:text-blue-300 block">En transit</span>
+              <span className="text-[10px] text-blue-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity">Détails ➔</span>
+            </div>
             <span className="text-2xl font-black text-blue-900 dark:text-blue-200 font-mono mt-1 block">
               {periodMetrics.inTransitCount}
             </span>
-            <span className="text-[10px] font-bold text-blue-700 dark:text-blue-400 mt-1 block">Sur la route</span>
-          </button>
+            <div className="flex items-center justify-between mt-1 text-[10px]">
+              <span className="font-bold text-blue-700 dark:text-blue-400">Sur la route</span>
+              <button 
+                onClick={(e) => { e.stopPropagation(); onFilterByStatus('EN_TRANSIT'); }}
+                className="underline text-blue-800 dark:text-blue-300 font-semibold hover:text-blue-950"
+                title="Filtrer la liste principale"
+              >
+                Filtrer
+              </button>
+            </div>
+          </div>
 
           {/* Arrivé agence */}
-          <button
-            onClick={() => onFilterByStatus('ARRIVE_AGENCE')}
-            className="p-4 rounded-xl bg-purple-50/70 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/50 text-left hover:ring-2 hover:ring-purple-400 transition-all cursor-pointer"
+          <div
+            onClick={() => handleOpenCalculation({ type: 'STATUS_ARRIVED', title: "Expéditions arrivées en agence destinataire" })}
+            className="p-4 rounded-xl bg-purple-50/70 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/50 text-left hover:ring-2 hover:ring-purple-400 hover:border-purple-400 transition-all cursor-pointer group"
+            title="Cliquez pour voir les détails des bons arrivés en agence"
           >
-            <span className="text-[10px] font-black uppercase tracking-wider text-purple-800 dark:text-purple-300 block">Arrivé Agence</span>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black uppercase tracking-wider text-purple-800 dark:text-purple-300 block">Arrivé Agence</span>
+              <span className="text-[10px] text-purple-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity">Détails ➔</span>
+            </div>
             <span className="text-2xl font-black text-purple-900 dark:text-purple-200 font-mono mt-1 block">
               {periodMetrics.arrivedCount}
             </span>
-            <span className="text-[10px] font-bold text-purple-700 dark:text-purple-400 mt-1 block">Prêt au retrait</span>
-          </button>
+            <div className="flex items-center justify-between mt-1 text-[10px]">
+              <span className="font-bold text-purple-700 dark:text-purple-400">Prêt au retrait</span>
+              <button 
+                onClick={(e) => { e.stopPropagation(); onFilterByStatus('ARRIVE_AGENCE'); }}
+                className="underline text-purple-800 dark:text-purple-300 font-semibold hover:text-purple-950"
+                title="Filtrer la liste principale"
+              >
+                Filtrer
+              </button>
+            </div>
+          </div>
 
           {/* Livré */}
-          <button
-            onClick={() => onFilterByStatus('LIVRE')}
-            className="p-4 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 text-left hover:ring-2 hover:ring-emerald-400 transition-all cursor-pointer"
+          <div
+            onClick={() => handleOpenCalculation({ type: 'STATUS_DELIVERED', title: "Expéditions livrées aux destinataires" })}
+            className="p-4 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 text-left hover:ring-2 hover:ring-emerald-400 hover:border-emerald-400 transition-all cursor-pointer group"
+            title="Cliquez pour voir les détails des bons livrés"
           >
-            <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 dark:text-emerald-300 block">Livré</span>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 dark:text-emerald-300 block">Livré</span>
+              <span className="text-[10px] text-emerald-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity">Détails ➔</span>
+            </div>
             <span className="text-2xl font-black text-emerald-900 dark:text-emerald-200 font-mono mt-1 block">
               {periodMetrics.deliveredCount}
             </span>
-            <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 mt-1 block">Terminé</span>
-          </button>
+            <div className="flex items-center justify-between mt-1 text-[10px]">
+              <span className="font-bold text-emerald-700 dark:text-emerald-400">Terminé</span>
+              <button 
+                onClick={(e) => { e.stopPropagation(); onFilterByStatus('LIVRE'); }}
+                className="underline text-emerald-800 dark:text-emerald-300 font-semibold hover:text-emerald-950"
+                title="Filtrer la liste principale"
+              >
+                Filtrer
+              </button>
+            </div>
+          </div>
 
           {/* Annulé */}
-          <button
-            onClick={() => onFilterByStatus('ANNULE')}
-            className="p-4 rounded-xl bg-rose-50/70 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/50 text-left hover:ring-2 hover:ring-rose-400 transition-all cursor-pointer"
+          <div
+            onClick={() => handleOpenCalculation({ type: 'STATUS_CANCELLED', title: "Expéditions annulées" })}
+            className="p-4 rounded-xl bg-rose-50/70 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/50 text-left hover:ring-2 hover:ring-rose-400 hover:border-rose-400 transition-all cursor-pointer group"
+            title="Cliquez pour voir les détails des bons annulés"
           >
-            <span className="text-[10px] font-black uppercase tracking-wider text-rose-800 dark:text-rose-300 block">Annulé</span>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black uppercase tracking-wider text-rose-800 dark:text-rose-300 block">Annulé</span>
+              <span className="text-[10px] text-rose-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity">Détails ➔</span>
+            </div>
             <span className="text-2xl font-black text-rose-900 dark:text-rose-200 font-mono mt-1 block">
               {periodMetrics.cancelledCount}
             </span>
-            <span className="text-[10px] font-bold text-rose-700 dark:text-rose-400 mt-1 block">Non abouti</span>
-          </button>
+            <div className="flex items-center justify-between mt-1 text-[10px]">
+              <span className="font-bold text-rose-700 dark:text-rose-400">Non abouti</span>
+              <button 
+                onClick={(e) => { e.stopPropagation(); onFilterByStatus('ANNULE'); }}
+                className="underline text-rose-800 dark:text-rose-300 font-semibold hover:text-rose-950"
+                title="Filtrer la liste principale"
+              >
+                Filtrer
+              </button>
+            </div>
+          </div>
 
         </div>
       </div>
@@ -1575,23 +1828,38 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
         
         {/* Hourly Rush Breakdown */}
         <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-          <h3 className="text-xs font-black uppercase tracking-wider text-slate-500 flex items-center gap-2">
-            <Clock className="w-4 h-4 text-orange-600" />
-            <span>Créneaux Horaires de Pointe (Enregistrements)</span>
-          </h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-black uppercase tracking-wider text-slate-500 flex items-center gap-2">
+              <Clock className="w-4 h-4 text-orange-600" />
+              <span>Créneaux Horaires de Pointe (Enregistrements)</span>
+            </h3>
+            <span className="text-[10px] text-slate-400 font-bold">24 Heures</span>
+          </div>
 
           <div className="space-y-2.5">
             {hourlySlots.map((slot, idx) => {
               const pct = maxHourlyCount > 0 ? Math.round((slot.count / maxHourlyCount) * 100) : 0;
               return (
-                <div key={idx} className="space-y-1">
+                <div 
+                  key={idx} 
+                  onClick={() => slot.count > 0 && handleOpenCalculation({ 
+                    type: 'TIME_SLOT', 
+                    title: `Expéditions enregistrées : ${slot.label}`, 
+                    extraData: { slotLabel: slot.label, hourStart: idx * 3, hourEnd: (idx + 1) * 3 } 
+                  })}
+                  className={`space-y-1 p-1.5 rounded-lg transition-colors ${slot.count > 0 ? 'hover:bg-orange-50/60 dark:hover:bg-slate-800/60 cursor-pointer group' : ''}`}
+                  title={slot.count > 0 ? `Cliquez pour voir les ${slot.count} bon(s) de ${slot.label}` : undefined}
+                >
                   <div className="flex items-center justify-between text-xs font-bold">
-                    <span className="text-slate-600 dark:text-slate-300 font-mono">{slot.label}</span>
-                    <span className="text-orange-600 dark:text-orange-400 font-mono">{slot.count} bon(s)</span>
+                    <span className="text-slate-600 dark:text-slate-300 font-mono group-hover:text-orange-600">{slot.label}</span>
+                    <span className="text-orange-600 dark:text-orange-400 font-mono flex items-center gap-1">
+                      {slot.count} bon(s)
+                      {slot.count > 0 && <span className="text-[10px] opacity-0 group-hover:opacity-100">➔</span>}
+                    </span>
                   </div>
                   <div className="w-full h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
                     <div 
-                      className="bg-orange-500 h-full rounded-full transition-all duration-300"
+                      className="bg-orange-500 h-full rounded-full transition-all duration-300 group-hover:brightness-110"
                       style={{ width: `${pct}%` }}
                     />
                   </div>
@@ -1603,24 +1871,39 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
 
         {/* Day of Week Peak Activity */}
         <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-          <h3 className="text-xs font-black uppercase tracking-wider text-slate-500 flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-purple-600" />
-            <span>Jours de Forte Affluence (Semaine)</span>
-          </h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-black uppercase tracking-wider text-slate-500 flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-purple-600" />
+              <span>Jours de Forte Affluence (Semaine)</span>
+            </h3>
+            <span className="text-[10px] text-slate-400 font-bold">Lun - Dim</span>
+          </div>
 
           <div className="space-y-2.5">
             {[1, 2, 3, 4, 5, 6, 0].map(dayIdx => {
               const count = periodMetrics.dayOfWeekDistribution[dayIdx] || 0;
               const pct = maxDayCount > 0 ? Math.round((count / maxDayCount) * 100) : 0;
               return (
-                <div key={dayIdx} className="space-y-1">
+                <div 
+                  key={dayIdx} 
+                  onClick={() => count > 0 && handleOpenCalculation({ 
+                    type: 'DAY_OF_WEEK', 
+                    title: `Expéditions enregistrées les ${dayNames[dayIdx]}s`, 
+                    extraData: { dayIdx, dayName: dayNames[dayIdx] } 
+                  })}
+                  className={`space-y-1 p-1.5 rounded-lg transition-colors ${count > 0 ? 'hover:bg-purple-50/60 dark:hover:bg-slate-800/60 cursor-pointer group' : ''}`}
+                  title={count > 0 ? `Cliquez pour voir les ${count} bon(s) du ${dayNames[dayIdx]}` : undefined}
+                >
                   <div className="flex items-center justify-between text-xs font-bold">
-                    <span className="text-slate-600 dark:text-slate-300">{dayNames[dayIdx]}</span>
-                    <span className="text-purple-600 dark:text-purple-400 font-mono">{count} bon(s)</span>
+                    <span className="text-slate-600 dark:text-slate-300 group-hover:text-purple-600">{dayNames[dayIdx]}</span>
+                    <span className="text-purple-600 dark:text-purple-400 font-mono flex items-center gap-1">
+                      {count} bon(s)
+                      {count > 0 && <span className="text-[10px] opacity-0 group-hover:opacity-100">➔</span>}
+                    </span>
                   </div>
                   <div className="w-full h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
                     <div 
-                      className="bg-purple-500 h-full rounded-full transition-all duration-300"
+                      className="bg-purple-500 h-full rounded-full transition-all duration-300 group-hover:brightness-110"
                       style={{ width: `${pct}%` }}
                     />
                   </div>
@@ -1642,7 +1925,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
               <MapPin className="w-4 h-4 text-orange-600" />
               <span>Top Destinations ({periodLabel})</span>
             </h3>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Classé par volume</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Cliquez pour détails</span>
           </div>
 
           {periodMetrics.destinations.length === 0 ? (
@@ -1657,11 +1940,18 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
                 return (
                   <div
                     key={destName}
-                    className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-1.5"
+                    onClick={() => handleOpenCalculation({ 
+                      type: 'DESTINATION', 
+                      title: `Détail Expéditions vers : ${destName}`, 
+                      extraData: { destinationCity: destName } 
+                    })}
+                    className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-1.5 cursor-pointer hover:border-orange-400 hover:ring-2 hover:ring-orange-400/20 transition-all group"
+                    title={`Cliquez pour voir les ${data.count} bon(s) vers ${destName}`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-black text-xs text-slate-900 dark:text-white uppercase tracking-tight">
+                      <span className="font-black text-xs text-slate-900 dark:text-white uppercase tracking-tight group-hover:text-orange-600 transition-colors flex items-center gap-1">
                         {destName}
+                        <span className="text-[10px] text-orange-400 opacity-0 group-hover:opacity-100">➔</span>
                       </span>
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-black text-orange-600 dark:text-orange-400 font-mono">
@@ -1689,7 +1979,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
               <Building2 className="w-4 h-4 text-blue-600" />
               <span>Agences de Départ & Opérateurs</span>
             </h3>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Période active</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Cliquez pour détails</span>
           </div>
 
           {periodMetrics.departureAgencies.length === 0 ? (
@@ -1704,11 +1994,18 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
                 return (
                   <div
                     key={depName}
-                    className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-1.5"
+                    onClick={() => handleOpenCalculation({ 
+                      type: 'DEPARTURE', 
+                      title: `Détail Expéditions au départ de : ${depName}`, 
+                      extraData: { departureCity: depName } 
+                    })}
+                    className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-1.5 cursor-pointer hover:border-blue-400 hover:ring-2 hover:ring-blue-400/20 transition-all group"
+                    title={`Cliquez pour voir les ${data.count} bon(s) au départ de ${depName}`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-black text-xs text-slate-900 dark:text-white uppercase tracking-tight">
+                      <span className="font-black text-xs text-slate-900 dark:text-white uppercase tracking-tight group-hover:text-blue-600 transition-colors flex items-center gap-1">
                         {depName}
+                        <span className="text-[10px] text-blue-400 opacity-0 group-hover:opacity-100">➔</span>
                       </span>
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-black text-blue-600 dark:text-blue-400 font-mono">
@@ -1730,6 +2027,21 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
         </div>
 
       </div>
+
+      {/* Calculation Detail Modal */}
+      {isCalculationModalOpen && calculationTarget && (
+        <CalculationDetailModal
+          isOpen={isCalculationModalOpen}
+          onClose={() => setIsCalculationModalOpen(false)}
+          target={calculationTarget}
+          periodVouchers={filteredVouchers}
+          allVouchers={vouchers}
+          settings={settings}
+          periodLabel={periodLabel}
+          onOpenVoucherDetail={onOpenVoucherDetail}
+          onFilterByStatus={onFilterByStatus}
+        />
+      )}
 
     </div>
   );
