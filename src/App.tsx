@@ -491,6 +491,7 @@ export default function App() {
         onSubmit={handleSaveVoucher}
         initialVoucher={editingVoucher}
         settings={settings}
+        vouchers={vouchers}
         currentAgent={currentAgent}
       />
 
@@ -557,6 +558,7 @@ export default function App() {
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
         settings={settings}
+        vouchers={vouchers}
         onSaveSettings={handleSaveSettings}
         onResetDemo={handleResetDemo}
       />

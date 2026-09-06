@@ -144,7 +144,7 @@ export const VouchersList: React.FC<VouchersListProps> = ({
             {/* New Voucher Button */}
             <button
               onClick={onOpenCreate}
-              className="px-3.5 sm:px-4 py-2 bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="px-3.5 sm:px-4 py-2 bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white font-black text-xs uppercase tracking-wider rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <PlusCircle className="w-4 h-4" />
               <span>Nouveau Bon</span>
@@ -797,7 +797,7 @@ export const VouchersList: React.FC<VouchersListProps> = ({
                               <button
                                 type="button"
                                 onClick={() => onDirectValidate(v.id)}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-all cursor-pointer"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white transition-all cursor-pointer"
                                 title="Valider immédiatement ce bon"
                               >
                                 <CheckCircle2 className="w-3.5 h-3.5" />

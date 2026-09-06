@@ -48,6 +48,7 @@ interface VoucherFormModalProps {
   onSubmit: (voucherData: Partial<Voucher>, actionAfterSave?: 'print' | 'share') => Promise<void>;
   initialVoucher?: Voucher | null;
   settings: CompanySettings;
+  vouchers?: Voucher[];
   currentAgent?: AgentProfile;
 }
 
@@ -57,6 +58,7 @@ export const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
   onSubmit,
   initialVoucher,
   settings,
+  vouchers,
   currentAgent
 }) => {
   const isEditing = !!initialVoucher;
@@ -207,7 +209,36 @@ export const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
         setDate(today);
         setTime(nowTime);
         
-        const nextNum = settings.nextTrackingNumber || 1;
+        // Compute highest existing sequence across vouchers to avoid duplicates
+        let highestExistingSeq = 0;
+        if (vouchers && vouchers.length > 0) {
+          for (const v of vouchers) {
+            if (v.sequenceNumber && typeof v.sequenceNumber === 'number' && v.sequenceNumber > highestExistingSeq) {
+              highestExistingSeq = v.sequenceNumber;
+            }
+            if (v.trackingNumber) {
+              const digits = String(v.trackingNumber).replace(/\D/g, '');
+              if (digits) {
+                const parsed = parseInt(digits, 10);
+                if (!isNaN(parsed) && parsed > highestExistingSeq) {
+                  highestExistingSeq = parsed;
+                }
+              }
+            }
+          }
+        }
+
+        let nextNum = Number(settings.nextTrackingNumber) || 1;
+        // If the number is already used by an existing voucher, increment to the next available number
+        const isConflict = vouchers && vouchers.some(v => {
+          const testCode = formatTrackingNumber(nextNum, settings.trackingCodeDigits, settings.trackingPrefix, settings.trackingSuffix);
+          return v.trackingNumber === testCode || v.sequenceNumber === nextNum;
+        });
+
+        if (isConflict) {
+          nextNum = Math.max(nextNum, highestExistingSeq + 1);
+        }
+
         setSequenceNumber(nextNum);
         setTrackingNumber(
           formatTrackingNumber(nextNum, settings.trackingCodeDigits, settings.trackingPrefix, settings.trackingSuffix)
@@ -264,7 +295,7 @@ export const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
 
     prevIsOpenRef.current = isOpen;
     prevVoucherIdRef.current = initialVoucher?.id;
-  }, [isOpen, initialVoucher]);
+  }, [isOpen, initialVoucher, settings.nextTrackingNumber, vouchers]);
 
   // Automatic Computations:
   // 1. Total parcels count (sum of quantities entered by user)
@@ -530,11 +561,20 @@ export const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
     try {
       setIsSubmitting(true);
 
+      let finalSeq = sequenceNumber;
+      const digitsInTracking = trackingNumber.replace(/\D/g, '');
+      if (digitsInTracking) {
+        const parsed = parseInt(digitsInTracking, 10);
+        if (!isNaN(parsed) && parsed > 0) {
+          finalSeq = parsed;
+        }
+      }
+
       const voucherPayload: Partial<Voucher> = {
         date,
         time,
         trackingNumber: trackingNumber.trim(),
-        sequenceNumber,
+        sequenceNumber: finalSeq,
         departureCity: departureCity.trim() || settings.defaultDepartureCity || 'Casablanca',
         destinationCity: destinationCity.trim(),
         sender: {
@@ -655,22 +695,45 @@ export const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
                   <Hash className="w-3.5 h-3.5 text-orange-600" />
                   N° de Suivi du Bon
                 </label>
-                <button
-                  type="button"
-                  onClick={() => setIsManualTracking(!isManualTracking)}
-                  className="text-[11px] text-orange-700 dark:text-orange-400 hover:underline flex items-center gap-1"
-                  title="Modifier manuellement le numéro de suivi si besoin"
-                >
-                  {isManualTracking ? <Unlock className="w-3 h-3 text-orange-600" /> : <Lock className="w-3 h-3" />}
-                  <span>{isManualTracking ? 'Manuel' : 'Automatique'}</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const currentSeq = parseInt(trackingNumber.replace(/\D/g, ''), 10) || sequenceNumber || 1;
+                      const next = currentSeq + 1;
+                      setSequenceNumber(next);
+                      setTrackingNumber(formatTrackingNumber(next, settings.trackingCodeDigits, settings.trackingPrefix, settings.trackingSuffix));
+                    }}
+                    className="text-[11px] px-1.5 py-0.5 rounded bg-orange-200/80 dark:bg-orange-900/60 text-orange-900 dark:text-orange-200 hover:bg-orange-300 font-bold flex items-center gap-0.5 transition-colors"
+                    title="Incrémenter au numéro suivant (+1)"
+                  >
+                    +1 Suivant
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsManualTracking(!isManualTracking)}
+                    className="text-[11px] text-orange-700 dark:text-orange-400 hover:underline flex items-center gap-1"
+                    title="Modifier manuellement le numéro de suivi si besoin"
+                  >
+                    {isManualTracking ? <Unlock className="w-3 h-3 text-orange-600" /> : <Lock className="w-3 h-3" />}
+                    <span>{isManualTracking ? 'Manuel' : 'Automatique'}</span>
+                  </button>
+                </div>
               </div>
 
               <div className="relative">
                 <input
                   type="text"
                   value={trackingNumber}
-                  onChange={e => setTrackingNumber(e.target.value)}
+                  onChange={e => {
+                    const val = e.target.value;
+                    setTrackingNumber(val);
+                    const digits = val.replace(/\D/g, '');
+                    if (digits) {
+                      const p = parseInt(digits, 10);
+                      if (!isNaN(p) && p > 0) setSequenceNumber(p);
+                    }
+                  }}
                   disabled={!isManualTracking}
                   className={`w-full px-3 py-2 text-base font-mono font-bold rounded-lg border transition-all ${
                     isManualTracking
@@ -1953,7 +2016,7 @@ export const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
               type="button"
               disabled={isSubmitting}
               onClick={() => handleFormSubmit(undefined, 'print')}
-              className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-sm shadow-sm flex items-center gap-2 transition-all"
+              className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-sm flex items-center gap-2 transition-all"
             >
               <Printer className="w-4 h-4 text-orange-400" />
               <span>Enregistrer & Imprimer</span>
@@ -1964,7 +2027,7 @@ export const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
               type="button"
               disabled={isSubmitting}
               onClick={() => handleFormSubmit(undefined, 'share')}
-              className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-sm flex items-center gap-2 transition-all"
+              className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm flex items-center gap-2 transition-all"
             >
               <Share2 className="w-4 h-4" />
               <span>Enregistrer & Partager</span>
@@ -1975,7 +2038,7 @@ export const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
               type="button"
               disabled={isSubmitting}
               onClick={() => handleFormSubmit()}
-              className="px-5 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-sm shadow-sm flex items-center gap-2 transition-all cursor-pointer"
+              className="px-5 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-sm flex items-center gap-2 transition-all cursor-pointer"
             >
               <Save className="w-4 h-4" />
               <span>{isSubmitting ? 'Enregistrement...' : 'Enregistrer le Bon'}</span>

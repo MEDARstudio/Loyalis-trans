@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   X, 
   Settings, 
@@ -21,9 +21,10 @@ import {
   AlertTriangle,
   RefreshCw,
   ExternalLink,
-  ShieldCheck
+  ShieldCheck,
+  ArrowRight
 } from 'lucide-react';
-import { CompanySettings } from '../types';
+import { CompanySettings, Voucher } from '../types';
 import { formatTrackingNumber } from '../utils/formatters';
 import { ConfirmModal } from './ConfirmModal';
 import { 
@@ -41,6 +42,7 @@ interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   settings: CompanySettings;
+  vouchers?: Voucher[];
   onSaveSettings: (newSettings: CompanySettings) => Promise<void>;
   onResetDemo: () => Promise<void>;
 }
@@ -49,6 +51,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
   onClose,
   settings,
+  vouchers,
   onSaveSettings,
   onResetDemo
 }) => {
@@ -59,6 +62,25 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState<boolean>(false);
+
+  // Calculate the highest sequence number from existing vouchers
+  const { lastVoucher, lastVoucherSeq } = useMemo(() => {
+    if (!vouchers || vouchers.length === 0) {
+      return { lastVoucher: null, lastVoucherSeq: 0 };
+    }
+    let maxSeq = 0;
+    let foundVoucher: Voucher | null = null;
+    for (const v of vouchers) {
+      const digits = String(v.trackingNumber || '').replace(/\D/g, '');
+      const parsedDigits = digits ? parseInt(digits, 10) : 0;
+      const effectiveSeq = v.sequenceNumber || parsedDigits || 0;
+      if (effectiveSeq > maxSeq) {
+        maxSeq = effectiveSeq;
+        foundVoucher = v;
+      }
+    }
+    return { lastVoucher: foundVoucher, lastVoucherSeq: maxSeq };
+  }, [vouchers]);
 
   // Supabase connection state
   const [supabaseConfig, setSupabaseConfig] = useState(getStoredSupabaseConfig());
@@ -270,6 +292,40 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           {activeTab === 'numbering' && (
             <div className="space-y-5">
               
+              {/* Status Banner - Last Voucher & Next Voucher */}
+              {lastVoucher && (
+                <div className="p-4 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-orange-100 dark:bg-orange-950/60 text-orange-600 flex items-center justify-center font-bold text-sm">
+                      <Hash className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <span className="text-xs text-slate-500 dark:text-slate-400 block font-medium">
+                        Dernier bon enregistré dans le système :
+                      </span>
+                      <span className="text-sm font-bold font-mono text-slate-800 dark:text-slate-100">
+                        N° {lastVoucher.trackingNumber}
+                      </span>
+                      <span className="text-xs text-slate-500 ml-2">
+                        (Séquence {lastVoucherSeq}) • {lastVoucher.date}
+                      </span>
+                    </div>
+                  </div>
+
+                  {lastVoucherSeq >= (formData.nextTrackingNumber || 1) && (
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, nextTrackingNumber: lastVoucherSeq + 1 })}
+                      className="text-xs px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-lg transition-colors flex items-center gap-1.5 shadow-sm"
+                      title="Définir automatiquement le prochain numéro après le dernier bon"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Définir après le dernier bon (N° {lastVoucherSeq + 1})</span>
+                    </button>
+                  )}
+                </div>
+              )}
+
               {/* Live Code Preview */}
               <div className="p-5 rounded-2xl bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/40 dark:to-amber-950/20 border-2 border-orange-200 dark:border-orange-900/60 flex flex-wrap items-center justify-between gap-4">
                 <div>
@@ -286,23 +342,52 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </div>
                 </div>
 
-                <div className="text-xs text-slate-600 dark:text-slate-400 max-w-xs">
-                  Le système incrémente automatiquement ce numéro après chaque création de bon de transport.
+                <div className="text-xs text-slate-600 dark:text-slate-400 max-w-xs bg-white/70 dark:bg-slate-900/70 p-2.5 rounded-xl border border-orange-200/50 dark:border-orange-800/40">
+                  <span className="font-semibold text-orange-700 dark:text-orange-400 block mb-0.5">Auto-Incrémentation garantie :</span>
+                  Chaque création de bon utilise ce numéro puis incrémente automatiquement pour que le bon suivant reçoive le numéro consécutif.
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                    Prochain Numéro Séquentiel (Nombre)
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                      Prochain Numéro Séquentiel (Nombre)
+                    </label>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, nextTrackingNumber: (prev.nextTrackingNumber || 1) + 1 }))}
+                        className="text-[11px] px-1.5 py-0.5 rounded bg-orange-100 hover:bg-orange-200 dark:bg-orange-950/60 dark:hover:bg-orange-900 text-orange-700 dark:text-orange-300 font-bold transition-colors"
+                        title="Ajouter +1"
+                      >
+                        +1
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, nextTrackingNumber: (prev.nextTrackingNumber || 1) + 10 }))}
+                        className="text-[11px] px-1.5 py-0.5 rounded bg-orange-100 hover:bg-orange-200 dark:bg-orange-950/60 dark:hover:bg-orange-900 text-orange-700 dark:text-orange-300 font-bold transition-colors"
+                        title="Ajouter +10"
+                      >
+                        +10
+                      </button>
+                    </div>
+                  </div>
                   <input
-                    type="number"
-                    min={1}
-                    value={formData.nextTrackingNumber || 1}
-                    onChange={e => setFormData({ ...formData, nextTrackingNumber: parseInt(e.target.value) || 1 })}
+                    type="text"
+                    inputMode="numeric"
+                    value={formData.nextTrackingNumber !== undefined ? formData.nextTrackingNumber : 1}
+                    onChange={e => {
+                      const digits = e.target.value.replace(/\D/g, '');
+                      const parsed = digits ? parseInt(digits, 10) : 1;
+                      setFormData({ ...formData, nextTrackingNumber: parsed });
+                    }}
+                    placeholder="ex: 505 ou 0000505"
                     className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm font-mono font-bold focus:ring-2 focus:ring-orange-500"
                   />
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 block">
+                    Vous pouvez saisir directement un chiffre (ex: 505).
+                  </span>
                 </div>
 
                 <div>
@@ -319,6 +404,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <option value={7}>7 Chiffres (Standard Loyalis: 0000001)</option>
                     <option value={8}>8 Chiffres (ex: 00000001)</option>
                   </select>
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 block">
+                    Complété automatiquement par des zéros à gauche.
+                  </span>
                 </div>
               </div>
 
@@ -853,7 +941,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             type="button"
             disabled={isSaving}
             onClick={handleSubmit}
-            className="px-6 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-sm shadow-sm flex items-center gap-2 transition-all cursor-pointer"
+            className="px-6 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-sm flex items-center gap-2 transition-all cursor-pointer"
           >
             {savedSuccess ? (
               <>

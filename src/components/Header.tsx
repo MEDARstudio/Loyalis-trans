@@ -226,7 +226,7 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={() => handleTabSelect('history')}
               className={`flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-lg font-bold text-xs uppercase tracking-wider transition-all cursor-pointer ${
                 activeTab === 'history'
-                  ? 'bg-orange-500 text-white shadow-sm'
+                  ? 'bg-orange-500 text-white'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800'
               }`}
             >
@@ -293,7 +293,7 @@ export const Header: React.FC<HeaderProps> = ({
                         }}
                         className={`w-full text-left p-2.5 rounded-xl flex items-start gap-2.5 transition-all cursor-pointer ${
                           isActive 
-                            ? 'bg-orange-500 text-white shadow-md' 
+                            ? 'bg-orange-500 text-white' 
                             : 'hover:bg-slate-800 text-slate-300'
                         }`}
                       >
@@ -354,7 +354,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               id="btn-header-new-voucher"
               onClick={onOpenNewVoucher}
-              className="flex items-center gap-1 px-2.5 sm:px-4 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white font-bold text-xs sm:text-sm uppercase tracking-wider shadow-sm transition-all cursor-pointer shrink-0"
+              className="flex items-center gap-1 px-2.5 sm:px-4 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white font-bold text-xs sm:text-sm uppercase tracking-wider transition-all cursor-pointer shrink-0"
             >
               <PlusCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
               <span className="hidden sm:inline">Nouveau Bon</span>

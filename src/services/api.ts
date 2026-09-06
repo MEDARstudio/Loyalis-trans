@@ -95,11 +95,13 @@ function getLocalSettings(): CompanySettings {
       return DEFAULT_SETTINGS;
     }
     const parsed = JSON.parse(raw);
-    // If nextTrackingNumber is old test 1..3, set to 502
-    if (!parsed.nextTrackingNumber || parsed.nextTrackingNumber < 502) {
-      parsed.nextTrackingNumber = 502;
+    const parsedNext = Number(parsed.nextTrackingNumber);
+    if (isNaN(parsedNext) || parsedNext <= 0) {
+      parsed.nextTrackingNumber = DEFAULT_SETTINGS.nextTrackingNumber || 1;
+    } else {
+      parsed.nextTrackingNumber = parsedNext;
     }
-    parsed.termsAndConditions = DEFAULT_SETTINGS.termsAndConditions;
+    parsed.termsAndConditions = parsed.termsAndConditions || DEFAULT_SETTINGS.termsAndConditions;
     return { ...DEFAULT_SETTINGS, ...parsed };
   } catch {
     return DEFAULT_SETTINGS;
@@ -397,6 +399,15 @@ export const api = {
         const data = await res.json();
         const local = getLocalVouchers();
         saveLocalVouchers([data.voucher, ...local.filter(v => v.id !== data.voucher.id)]);
+        
+        // Immediate local & Supabase settings update with incremented nextTrackingNumber
+        if (data.nextTrackingNumber) {
+          const currentSettings = getLocalSettings();
+          const updatedSettings = { ...currentSettings, nextTrackingNumber: data.nextTrackingNumber };
+          saveLocalSettings(updatedSettings);
+          supabaseApi.updateSettings({ nextTrackingNumber: data.nextTrackingNumber }).catch(() => {});
+        }
+
         // Mirror directly to Supabase as well
         supabaseApi.insertOrUpdateVoucher(data.voucher).catch(() => {});
         return data;
@@ -408,7 +419,21 @@ export const api = {
     // 2. Construct local object and save directly to Supabase
     const settings = getLocalSettings();
     const vouchers = getLocalVouchers();
-    const seq = payload.sequenceNumber || settings.nextTrackingNumber || (vouchers.length + 1);
+    
+    // Extract actual numeric sequence from tracking number or sequenceNumber
+    let seq = payload.sequenceNumber;
+    if (!seq && payload.trackingNumber) {
+      const digitsOnly = String(payload.trackingNumber).replace(/\D/g, '');
+      if (digitsOnly) {
+        const parsed = parseInt(digitsOnly, 10);
+        if (!isNaN(parsed) && parsed > 0) seq = parsed;
+      }
+    }
+    const currentConfiguredSeq = Number(settings.nextTrackingNumber) || 1;
+    if (!seq || isNaN(seq)) {
+      seq = currentConfiguredSeq;
+    }
+
     const tracking = payload.trackingNumber || String(seq).padStart(settings.trackingCodeDigits || 7, '0');
 
     const newVoucher: Voucher = {
@@ -453,9 +478,10 @@ export const api = {
       externalNotes: payload.externalNotes || ''
     };
 
-    const nextSeq = seq + 1;
+    const nextSeq = Math.max(currentConfiguredSeq, seq) + 1;
     saveLocalVouchers([newVoucher, ...vouchers]);
     saveLocalSettings({ ...settings, nextTrackingNumber: nextSeq });
+    supabaseApi.updateSettings({ nextTrackingNumber: nextSeq }).catch(() => {});
 
     // Send directly to Supabase
     supabaseApi.insertOrUpdateVoucher(newVoucher).catch(err => {

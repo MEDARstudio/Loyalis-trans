@@ -430,17 +430,30 @@ export async function createVoucher(payload: any): Promise<{ voucher: Voucher; n
   const currentNextSeq = Number(settings.nextTrackingNumber) || 1;
 
   let finalTrackingNumber = payload.trackingNumber;
-  let sequenceNumber = payload.sequenceNumber || currentNextSeq;
+  let sequenceNumber = payload.sequenceNumber;
 
-  if (!finalTrackingNumber || String(finalTrackingNumber).trim() === '') {
-    finalTrackingNumber = formatTrackingCode(currentNextSeq, settings);
-    sequenceNumber = currentNextSeq;
-    await updateSettings({ nextTrackingNumber: currentNextSeq + 1 });
-  } else {
-    if (sequenceNumber >= currentNextSeq) {
-      await updateSettings({ nextTrackingNumber: sequenceNumber + 1 });
+  // Extract sequence number from finalTrackingNumber if available
+  if (finalTrackingNumber && String(finalTrackingNumber).trim() !== '') {
+    const digitsOnly = String(finalTrackingNumber).replace(/\D/g, '');
+    if (digitsOnly) {
+      const parsed = parseInt(digitsOnly, 10);
+      if (!isNaN(parsed) && parsed > 0) {
+        sequenceNumber = parsed;
+      }
     }
   }
+
+  if (!sequenceNumber || isNaN(sequenceNumber)) {
+    sequenceNumber = currentNextSeq;
+  }
+
+  if (!finalTrackingNumber || String(finalTrackingNumber).trim() === '') {
+    finalTrackingNumber = formatTrackingCode(sequenceNumber, settings);
+  }
+
+  // Always increment the nextTrackingNumber based on the highest sequence
+  const nextSeq = Math.max(currentNextSeq, sequenceNumber) + 1;
+  await updateSettings({ nextTrackingNumber: nextSeq });
 
   const items = Array.isArray(payload.items) ? payload.items : [];
   const totalColis = payload.totalColis !== undefined ? Number(payload.totalColis) : items.reduce((sum: number, it: any) => sum + (Number(it.quantity) || 1), 0);

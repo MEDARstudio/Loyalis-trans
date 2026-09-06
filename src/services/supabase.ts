@@ -292,7 +292,8 @@ export const supabaseApi = {
       if (settings.trackingCodeDigits !== undefined) row.tracking_code_digits = settings.trackingCodeDigits;
       if (settings.trackingPrefix !== undefined) row.tracking_prefix = settings.trackingPrefix;
       if (settings.trackingSuffix !== undefined) row.tracking_suffix = settings.trackingSuffix;
-      if (settings.nextTrackingNumber !== undefined) row.next_tracking_number = settings.nextTrackingNumber;
+      if (settings.nextTrackingNumber !== undefined) row.next_tracking_number = Number(settings.nextTrackingNumber);
+      if ((settings as any).next_tracking_number !== undefined) row.next_tracking_number = Number((settings as any).next_tracking_number);
       if (settings.allowManualTrackingNumber !== undefined) row.allow_manual_tracking_number = settings.allowManualTrackingNumber;
       if (settings.defaultDepartureCity !== undefined) row.default_departure_city = settings.defaultDepartureCity;
       if (settings.defaultAgencies !== undefined) row.default_agencies = settings.defaultAgencies;

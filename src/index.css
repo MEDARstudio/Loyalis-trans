@@ -34,6 +34,26 @@
     display: flex;
     flex-direction: column;
   }
+
+  /* Style simple et net sans flou ni ombres derrière les boutons */
+  button,
+  .btn,
+  [role="button"],
+  input[type="button"],
+  input[type="submit"] {
+    box-shadow: none !important;
+    text-shadow: none !important;
+    filter: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  button:hover,
+  button:active,
+  button:focus {
+    box-shadow: none !important;
+    filter: none !important;
+  }
 }
 
 /* Custom modern scrollbars */
