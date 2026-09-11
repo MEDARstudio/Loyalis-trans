@@ -510,9 +510,9 @@ export default function App() {
       
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-2xl border border-orange-500/40 flex items-center gap-3 animate-slideUp text-sm font-semibold">
-          <div className="w-2.5 h-2.5 rounded-full bg-orange-500 animate-ping" />
-          <span>{toastMessage}</span>
+        <div className="fixed bottom-5 right-4 sm:right-5 z-50 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-2xl border border-orange-500/40 flex items-center gap-3 animate-slideUp text-sm font-semibold max-w-[calc(100vw-2rem)]">
+          <div className="w-2.5 h-2.5 rounded-full bg-orange-500 animate-ping shrink-0" />
+          <span className="truncate">{toastMessage}</span>
         </div>
       )}
 
@@ -532,7 +532,7 @@ export default function App() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3.5 sm:px-6 lg:px-8 py-4 sm:py-6 pb-12">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3.5 sm:px-6 lg:px-8 py-3 sm:py-6 pb-10 sm:pb-12">
         
         {activeTab === 'list' && (
           <VouchersList
