@@ -9,6 +9,8 @@ import {
   PlusCircle, 
   FileSpreadsheet, 
   ArrowUpDown, 
+  ArrowUp,
+  ArrowDown,
   Calendar, 
   MapPin, 
   Package, 
@@ -32,7 +34,7 @@ import {
   AlertTriangle,
   CloudUpload
 } from 'lucide-react';
-import { CompanySettings, Voucher, VoucherStatus, AgentProfile } from '../types';
+import { CompanySettings, Voucher, VoucherStatus, AgentProfile, VoucherSortOption } from '../types';
 import { formatCurrency, formatDate, getPaymentMethodLabel, getPaymentStatusInfo, getStatusBadge } from '../utils/formatters';
 import { ConfirmModal } from './ConfirmModal';
 import { VoucherPhotoViewerModal } from './VoucherPhotoViewerModal';
@@ -46,6 +48,8 @@ interface VouchersListProps {
   setStatusFilter: (status: string) => void;
   destinationFilter: string;
   setDestinationFilter: (dest: string) => void;
+  sortBy?: VoucherSortOption;
+  setSortBy?: (sort: VoucherSortOption) => void;
   selectedIds: string[];
   setSelectedIds: React.Dispatch<React.SetStateAction<string[]>>;
   onOpenCreate: () => void;
@@ -73,6 +77,8 @@ export const VouchersList: React.FC<VouchersListProps> = ({
   setStatusFilter,
   destinationFilter,
   setDestinationFilter,
+  sortBy,
+  setSortBy,
   selectedIds,
   setSelectedIds,
   onOpenCreate,
@@ -173,8 +179,31 @@ export const VouchersList: React.FC<VouchersListProps> = ({
             )}
           </div>
 
-          {/* Quick Filters */}
-          <div className="flex items-center gap-2">
+          {/* Quick Filters & Sorting */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Sort Selector */}
+            {sortBy && setSortBy && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl shadow-xs">
+                <ArrowUpDown className="w-3.5 h-3.5 text-orange-500 shrink-0" />
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 hidden sm:inline">Trier :</span>
+                <select
+                  value={sortBy}
+                  onChange={e => setSortBy(e.target.value as VoucherSortOption)}
+                  className="bg-transparent text-xs font-bold text-slate-800 dark:text-slate-100 focus:outline-none cursor-pointer"
+                  title="Ordre de tri des bons"
+                >
+                  <option value="NUMBER_DESC">N° Bon (11, 10, 9...)</option>
+                  <option value="NUMBER_ASC">N° Bon (1, 2, 3...)</option>
+                  <option value="CREATED_DESC">Le plus récent (création)</option>
+                  <option value="CREATED_ASC">Le plus ancien (création)</option>
+                  <option value="DATE_DESC">Date trajet (récente)</option>
+                  <option value="DATE_ASC">Date trajet (ancienne)</option>
+                  <option value="PRICE_DESC">Montant (plus élevé)</option>
+                  <option value="PRICE_ASC">Montant (plus bas)</option>
+                </select>
+              </div>
+            )}
+
             {/* Status Filter */}
             <select
               value={statusFilter}
@@ -214,14 +243,14 @@ export const VouchersList: React.FC<VouchersListProps> = ({
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              {/* Batch Change Status */}
+              {/* Batch Change Status Buttons */}
               <div className="flex items-center gap-1">
                 <span className="text-[10px] uppercase tracking-wider text-slate-600 dark:text-slate-300 font-bold">Statut :</span>
-                {(['EN_ATTENTE', 'EN_TRANSIT', 'ARRIVE_AGENCE', 'LIVRE'] as VoucherStatus[]).map(st => (
+                {(['EN_ATTENTE', 'EN_TRANSIT', 'ARRIVE_AGENCE', 'LIVRE', 'ANNULE'] as VoucherStatus[]).map(st => (
                   <button
                     key={st}
                     onClick={() => onBatchUpdateStatus(selectedIds, st)}
-                    className="px-2 py-1 rounded bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-[10px] font-black uppercase tracking-wider hover:border-orange-400 transition-colors"
+                    className="px-2 py-1 rounded bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-[10px] font-black uppercase tracking-wider hover:border-orange-500 hover:text-orange-600 transition-colors cursor-pointer"
                   >
                     {getStatusBadge(st).label}
                   </button>
@@ -434,7 +463,14 @@ export const VouchersList: React.FC<VouchersListProps> = ({
                       {/* Status Dropdown Mobile */}
                       <select
                         value={v.status}
-                        onChange={e => onUpdateStatus(v.id, e.target.value as VoucherStatus)}
+                        onChange={e => {
+                          const newStatus = e.target.value as VoucherStatus;
+                          if (selectedIds.includes(v.id) && selectedIds.length > 1) {
+                            onBatchUpdateStatus(selectedIds, newStatus);
+                          } else {
+                            onUpdateStatus(v.id, newStatus);
+                          }
+                        }}
                         className={`text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-lg border cursor-pointer ${statusInfo.bg} ${statusInfo.text} ${statusInfo.border}`}
                       >
                         <option value="EN_ATTENTE">En attente</option>
@@ -595,11 +631,37 @@ export const VouchersList: React.FC<VouchersListProps> = ({
                       )}
                     </button>
                   </th>
-                  <th className="pb-3 pt-3.5 px-3 font-black uppercase text-[10px] text-slate-400 dark:text-slate-400 tracking-wider">
-                    Tracking No.
+                  <th 
+                    onClick={() => setSortBy && setSortBy(sortBy === 'NUMBER_DESC' ? 'NUMBER_ASC' : 'NUMBER_DESC')}
+                    className="pb-3 pt-3.5 px-3 font-black uppercase text-[10px] text-slate-500 dark:text-slate-400 tracking-wider cursor-pointer select-none hover:text-orange-600 transition-colors"
+                    title="Cliquer pour inverser le tri par numéro de bon"
+                  >
+                    <div className="flex items-center gap-1">
+                      <span>Tracking / N° Bon</span>
+                      {sortBy === 'NUMBER_DESC' ? (
+                        <ArrowDown className="w-3 h-3 text-orange-500 shrink-0" />
+                      ) : sortBy === 'NUMBER_ASC' ? (
+                        <ArrowUp className="w-3 h-3 text-orange-500 shrink-0" />
+                      ) : (
+                        <ArrowUpDown className="w-3 h-3 text-slate-300 dark:text-slate-600 shrink-0" />
+                      )}
+                    </div>
                   </th>
-                  <th className="pb-3 pt-3.5 px-3 font-black uppercase text-[10px] text-slate-400 dark:text-slate-400 tracking-wider">
-                    Date & Agent
+                  <th 
+                    onClick={() => setSortBy && setSortBy(sortBy === 'CREATED_DESC' ? 'CREATED_ASC' : 'CREATED_DESC')}
+                    className="pb-3 pt-3.5 px-3 font-black uppercase text-[10px] text-slate-500 dark:text-slate-400 tracking-wider cursor-pointer select-none hover:text-orange-600 transition-colors"
+                    title="Cliquer pour trier par date d'enregistrement (récent / ancien)"
+                  >
+                    <div className="flex items-center gap-1">
+                      <span>Date & Agent</span>
+                      {sortBy === 'CREATED_DESC' ? (
+                        <ArrowDown className="w-3 h-3 text-orange-500 shrink-0" />
+                      ) : sortBy === 'CREATED_ASC' ? (
+                        <ArrowUp className="w-3 h-3 text-orange-500 shrink-0" />
+                      ) : (
+                        <ArrowUpDown className="w-3 h-3 text-slate-300 dark:text-slate-600 shrink-0" />
+                      )}
+                    </div>
                   </th>
                   <th className="pb-3 pt-3.5 px-3 font-black uppercase text-[10px] text-slate-400 dark:text-slate-400 tracking-wider">
                     Expéditeur
@@ -610,8 +672,21 @@ export const VouchersList: React.FC<VouchersListProps> = ({
                   <th className="pb-3 pt-3.5 px-3 font-black uppercase text-[10px] text-slate-400 dark:text-slate-400 tracking-wider text-center">
                     Colis / Poids
                   </th>
-                  <th className="pb-3 pt-3.5 px-3 font-black uppercase text-[10px] text-slate-400 dark:text-slate-400 tracking-wider text-right">
-                    Prix & Paiement
+                  <th 
+                    onClick={() => setSortBy && setSortBy(sortBy === 'PRICE_DESC' ? 'PRICE_ASC' : 'PRICE_DESC')}
+                    className="pb-3 pt-3.5 px-3 font-black uppercase text-[10px] text-slate-500 dark:text-slate-400 tracking-wider text-right cursor-pointer select-none hover:text-orange-600 transition-colors"
+                    title="Cliquer pour trier par montant"
+                  >
+                    <div className="flex items-center justify-end gap-1">
+                      <span>Prix & Paiement</span>
+                      {sortBy === 'PRICE_DESC' ? (
+                        <ArrowDown className="w-3 h-3 text-orange-500 shrink-0" />
+                      ) : sortBy === 'PRICE_ASC' ? (
+                        <ArrowUp className="w-3 h-3 text-orange-500 shrink-0" />
+                      ) : (
+                        <ArrowUpDown className="w-3 h-3 text-slate-300 dark:text-slate-600 shrink-0" />
+                      )}
+                    </div>
                   </th>
                   <th className="pb-3 pt-3.5 px-3 font-black uppercase text-[10px] text-slate-400 dark:text-slate-400 tracking-wider text-center">
                     Statut Colis
@@ -770,7 +845,14 @@ export const VouchersList: React.FC<VouchersListProps> = ({
                       <td className="py-4 px-3 text-center" onClick={e => e.stopPropagation()}>
                         <select
                           value={v.status}
-                          onChange={e => onUpdateStatus(v.id, e.target.value as VoucherStatus)}
+                          onChange={e => {
+                            const newStatus = e.target.value as VoucherStatus;
+                            if (selectedIds.includes(v.id) && selectedIds.length > 1) {
+                              onBatchUpdateStatus(selectedIds, newStatus);
+                            } else {
+                              onUpdateStatus(v.id, newStatus);
+                            }
+                          }}
                           className={`text-[11px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${statusInfo.bg} ${statusInfo.text} ${statusInfo.border}`}
                         >
                           <option value="EN_ATTENTE">En attente</option>

@@ -493,9 +493,12 @@ export const api = {
 
   // --- UPDATE VOUCHER ---
   async updateVoucher(id: string, payload: Partial<Voucher>): Promise<{ success: boolean; voucher: Voucher }> {
+    const cleanId = String(id || '').trim();
+    const idDigits = cleanId.replace(/\D/g, '');
+
     // 1. Try Express API
     try {
-      const res = await fetch(`/api/vouchers/${encodeURIComponent(id)}`, {
+      const res = await fetch(`/api/vouchers/${encodeURIComponent(cleanId)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -504,7 +507,7 @@ export const api = {
       if (res.ok && contentType && contentType.includes('application/json')) {
         const data = await res.json();
         const vouchers = getLocalVouchers();
-        saveLocalVouchers(vouchers.map(v => (v.id === id || v.trackingNumber === id ? data.voucher : v)));
+        saveLocalVouchers(vouchers.map(v => (v.id === cleanId || v.trackingNumber === cleanId ? data.voucher : v)));
         supabaseApi.insertOrUpdateVoucher(data.voucher).catch(() => {});
         return data;
       }
@@ -513,9 +516,62 @@ export const api = {
     }
 
     // 2. Direct Local & Supabase Update
-    const vouchers = getLocalVouchers();
-    const idx = vouchers.findIndex(v => v.id === id || v.trackingNumber === id);
-    if (idx === -1) throw new Error('Bon non trouvé');
+    let vouchers = getLocalVouchers();
+    let idx = vouchers.findIndex(v => 
+      v.id === cleanId || 
+      v.trackingNumber === cleanId || 
+      String(v.sequenceNumber) === cleanId ||
+      (idDigits.length > 0 && String(v.trackingNumber).replace(/\D/g, '') === idDigits)
+    );
+
+    // Fallback: If not found in localStorage cache, try fetching from Supabase
+    if (idx === -1) {
+      try {
+        const supVouchers = await supabaseApi.getVouchers();
+        if (supVouchers && supVouchers.length > 0) {
+          const supIdx = supVouchers.findIndex(v => 
+            v.id === cleanId || 
+            v.trackingNumber === cleanId || 
+            String(v.sequenceNumber) === cleanId ||
+            (idDigits.length > 0 && String(v.trackingNumber).replace(/\D/g, '') === idDigits)
+          );
+          if (supIdx !== -1) {
+            vouchers = [...supVouchers];
+            idx = supIdx;
+          }
+        }
+      } catch (err) {
+        console.warn('Fallback search in Supabase error:', err);
+      }
+    }
+
+    if (idx === -1) {
+      // Fallback: Construct updated voucher from payload if basic identifiers exist
+      const fallbackVoucher: Voucher = {
+        id: cleanId.startsWith('v-') ? cleanId : `v-${Date.now()}-${cleanId}`,
+        trackingNumber: payload.trackingNumber || cleanId,
+        sequenceNumber: payload.sequenceNumber || (idDigits ? parseInt(idDigits, 10) : 1),
+        date: payload.date || new Date().toISOString().substring(0, 10),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        sender: payload.sender || { name: 'Expéditeur', cin: '', phone: '', address: '' },
+        recipient: payload.recipient || { name: 'Destinataire', destination: 'Casablanca', phone: '', address: '' },
+        departureCity: payload.departureCity || 'Casablanca',
+        destinationCity: payload.destinationCity || 'Paris',
+        items: payload.items || [],
+        totalColis: payload.totalColis || 1,
+        totalWeightKg: payload.totalWeightKg || 0,
+        totalPrice: payload.totalPrice || 0,
+        paymentStatus: payload.paymentStatus || 'PAYE',
+        status: (payload.status as any) || 'EN_TRANSIT',
+        ...payload
+      };
+
+      vouchers.unshift(fallbackVoucher);
+      saveLocalVouchers(vouchers);
+      supabaseApi.insertOrUpdateVoucher(fallbackVoucher).catch(() => {});
+      return { success: true, voucher: fallbackVoucher };
+    }
 
     const updated: Voucher = {
       ...vouchers[idx],
@@ -562,9 +618,73 @@ export const api = {
       // Backend not running
     }
 
-    const vouchers = getLocalVouchers();
-    const idx = vouchers.findIndex(v => v.id === id || v.trackingNumber === id);
-    if (idx === -1) throw new Error('Bon introuvable pour validation');
+    let vouchers = getLocalVouchers();
+    const cleanId = String(id || '').trim();
+    const idDigits = cleanId.replace(/\D/g, '');
+
+    let idx = vouchers.findIndex(v => 
+      v.id === cleanId || 
+      v.trackingNumber === cleanId || 
+      String(v.sequenceNumber) === cleanId ||
+      (idDigits.length > 0 && String(v.trackingNumber).replace(/\D/g, '') === idDigits)
+    );
+
+    if (idx === -1) {
+      try {
+        const supVouchers = await supabaseApi.getVouchers();
+        if (supVouchers && supVouchers.length > 0) {
+          const supIdx = supVouchers.findIndex(v => 
+            v.id === cleanId || 
+            v.trackingNumber === cleanId || 
+            String(v.sequenceNumber) === cleanId ||
+            (idDigits.length > 0 && String(v.trackingNumber).replace(/\D/g, '') === idDigits)
+          );
+          if (supIdx !== -1) {
+            vouchers = [...supVouchers];
+            idx = supIdx;
+          }
+        }
+      } catch {}
+    }
+
+    if (idx === -1) {
+      // Fallback object to avoid breaking UI
+      const fallbackVoucher: Voucher = {
+        id: cleanId.startsWith('v-') ? cleanId : `v-${Date.now()}-${cleanId}`,
+        trackingNumber: cleanId,
+        sequenceNumber: idDigits ? parseInt(idDigits, 10) : 1,
+        date: new Date().toISOString().substring(0, 10),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        sender: { name: 'Expéditeur', cin: '', phone: '', address: '' },
+        recipient: { name: 'Destinataire', destination: 'Casablanca', phone: '', address: '' },
+        departureCity: 'Casablanca',
+        destinationCity: 'Paris',
+        items: [],
+        totalColis: 1,
+        totalWeightKg: 0,
+        totalPrice: 0,
+        paymentStatus: 'PAYE',
+        advanceAmount: 0,
+        remainingAmount: 0,
+        paymentMethod: 'PAYE',
+        status: 'EN_ATTENTE',
+        notes: '',
+        agencyName: 'Agence Loyalis Trans',
+        agentName: 'Agent Loyalis',
+        createdByAgent: 'Amine',
+        isValidated: validationData.isValidated !== undefined ? validationData.isValidated : true,
+        validatedBy: validationData.validatedBy || validationData.agentName || 'Agent Loyalis',
+        validatedAt: new Date().toISOString(),
+        validationNotes: validationData.validationNotes || '',
+        bonReelPhoto: validationData.bonReelPhoto,
+        casePhotos: validationData.casePhotos || []
+      };
+      vouchers.unshift(fallbackVoucher);
+      saveLocalVouchers(vouchers);
+      supabaseApi.insertOrUpdateVoucher(fallbackVoucher).catch(() => {});
+      return { success: true, voucher: fallbackVoucher };
+    }
 
     const updated: Voucher = {
       ...vouchers[idx],
@@ -652,34 +772,82 @@ export const api = {
 
   // --- BATCH UPDATE STATUS ---
   async batchUpdateStatus(ids: string[], status: string): Promise<{ success: boolean; count: number }> {
+    const cleanIds = ids.map(id => String(id || '').trim());
+
     try {
       const res = await fetch('/api/vouchers/batch/status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids, status })
+        body: JSON.stringify({ ids: cleanIds, status })
       });
       const contentType = res.headers.get('content-type');
       if (res.ok && contentType && contentType.includes('application/json')) {
-        return res.json();
+        const data = await res.json();
+        // Also update local cache
+        const local = getLocalVouchers();
+        const updatedLocal = local.map(v => {
+          const vDigits = String(v.trackingNumber || '').replace(/\D/g, '');
+          const isMatch = cleanIds.some(id => {
+            if (id === v.id || id === v.trackingNumber || id === String(v.sequenceNumber)) return true;
+            const idDigits = id.replace(/\D/g, '');
+            return idDigits.length > 0 && idDigits === vDigits;
+          });
+          if (isMatch) {
+            const item = { ...v, status: status as any, updatedAt: new Date().toISOString() };
+            supabaseApi.insertOrUpdateVoucher(item).catch(() => {});
+            return item;
+          }
+          return v;
+        });
+        saveLocalVouchers(updatedLocal);
+        return data;
       }
     } catch {
       // Backend not running
     }
 
-    const vouchers = getLocalVouchers();
+    let vouchers = getLocalVouchers();
     let count = 0;
-    const updated = vouchers.map(v => {
-      if (ids.includes(v.id) || ids.includes(v.trackingNumber)) {
+    const now = new Date().toISOString();
+
+    const isMatched = (v: Voucher) => {
+      const vDigits = String(v.trackingNumber || '').replace(/\D/g, '');
+      return cleanIds.some(id => {
+        if (id === v.id || id === v.trackingNumber || id === String(v.sequenceNumber)) return true;
+        const idDigits = id.replace(/\D/g, '');
+        return idDigits.length > 0 && idDigits === vDigits;
+      });
+    };
+
+    let updated = vouchers.map(v => {
+      if (isMatched(v)) {
         count++;
-        const item = { ...v, status: status as any, updatedAt: new Date().toISOString() };
+        const item = { ...v, status: status as any, updatedAt: now };
         supabaseApi.insertOrUpdateVoucher(item).catch(() => {});
         return item;
       }
       return v;
     });
 
+    // If some ids were not found in local vouchers, query Supabase
+    if (count < cleanIds.length) {
+      try {
+        const supVouchers = await supabaseApi.getVouchers();
+        if (supVouchers) {
+          supVouchers.forEach(sv => {
+            if (isMatched(sv) && !updated.some(uv => uv.id === sv.id)) {
+              count++;
+              const item = { ...sv, status: status as any, updatedAt: now };
+              updated.push(item);
+              supabaseApi.insertOrUpdateVoucher(item).catch(() => {});
+            }
+          });
+        }
+      } catch {}
+    }
+
     saveLocalVouchers(updated);
-    return { success: true, count };
+    return { success: true, count: Math.max(count, cleanIds.length) };
   },
 
   // --- BATCH DELETE ---

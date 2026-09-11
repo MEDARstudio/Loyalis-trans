@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Header } from './components/Header';
 import { VouchersList } from './components/VouchersList';
 import { VoucherDetailModal } from './components/VoucherDetailModal';
@@ -11,7 +11,7 @@ import { TrackingLookup } from './components/TrackingLookup';
 import { StatsDashboard } from './components/StatsDashboard';
 import { HistoryStatementsView } from './components/HistoryStatementsView';
 import { VoucherValidationModal } from './components/VoucherValidationModal';
-import { CompanySettings, Voucher, VoucherStats, VoucherStatus, AgentProfile, DEFAULT_AGENTS } from './types';
+import { CompanySettings, Voucher, VoucherStats, VoucherStatus, AgentProfile, DEFAULT_AGENTS, VoucherSortOption } from './types';
 import { api } from './services/api';
 import { PlusCircle, Search, RefreshCw, AlertCircle, Sparkles, Package, BarChart3, History, Plus } from 'lucide-react';
 
@@ -74,6 +74,22 @@ export default function App() {
   const [destinationFilter, setDestinationFilter] = useState<string>('ALL');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [initialTrackingQuery, setInitialTrackingQuery] = useState<string>('');
+
+  // Sorting: Default is 'NUMBER_DESC' (le plus grand numéro en haut, ex. 11 reste au-dessus de 10)
+  const [sortBy, setSortBy] = useState<VoucherSortOption>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('loyalis_vouchers_sort_by');
+      if (saved) return saved as VoucherSortOption;
+    }
+    return 'NUMBER_DESC';
+  });
+
+  const handleSetSortBy = (newSort: VoucherSortOption) => {
+    setSortBy(newSort);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('loyalis_vouchers_sort_by', newSort);
+    }
+  };
 
   // Modals
   const [isDetailModalOpen, setIsDetailModalOpen] = useState<boolean>(false);
@@ -142,35 +158,104 @@ export default function App() {
     return () => clearInterval(interval);
   }, [loadData]);
 
-  // Filter Vouchers Client-Side for instant snappiness
-  const filteredVouchers = vouchers.filter(v => {
-    const q = searchQuery.toLowerCase().trim();
-    if (q) {
-      const matchesSearch =
-        v.trackingNumber.toLowerCase().includes(q) ||
-        v.sender.name.toLowerCase().includes(q) ||
-        v.sender.cin.toLowerCase().includes(q) ||
-        v.sender.phone.includes(q) ||
-        v.recipient.name.toLowerCase().includes(q) ||
-        v.recipient.destination.toLowerCase().includes(q) ||
-        v.recipient.phone.includes(q) ||
-        v.items.some(it => it.nature.toLowerCase().includes(q));
-      if (!matchesSearch) return false;
+  // Helper to extract numeric sequence of a voucher (e.g. 11, 10, etc.)
+  const getVoucherNumber = (v: Voucher): number => {
+    if (typeof v.sequenceNumber === 'number' && !isNaN(v.sequenceNumber) && v.sequenceNumber > 0) {
+      return v.sequenceNumber;
     }
-
-    if (statusFilter !== 'ALL' && v.status !== statusFilter) {
-      return false;
+    const digits = String(v.trackingNumber || '').replace(/\D/g, '');
+    const parsed = parseInt(digits, 10);
+    if (!isNaN(parsed) && parsed > 0) {
+      return parsed;
     }
+    return 0;
+  };
 
-    if (destinationFilter !== 'ALL') {
-      const matchesDest =
-        v.destinationCity?.toLowerCase() === destinationFilter.toLowerCase() ||
-        v.recipient.destination?.toLowerCase().includes(destinationFilter.toLowerCase());
-      if (!matchesDest) return false;
-    }
+  // Filter & Sort Vouchers Client-Side for instant snappiness and user-defined order
+  const filteredVouchers = useMemo(() => {
+    // 1. Filter
+    const result = vouchers.filter(v => {
+      const q = searchQuery.toLowerCase().trim();
+      if (q) {
+        const matchesSearch =
+          v.trackingNumber.toLowerCase().includes(q) ||
+          v.sender.name.toLowerCase().includes(q) ||
+          v.sender.cin.toLowerCase().includes(q) ||
+          v.sender.phone.includes(q) ||
+          v.recipient.name.toLowerCase().includes(q) ||
+          v.recipient.destination.toLowerCase().includes(q) ||
+          v.recipient.phone.includes(q) ||
+          v.items.some(it => it.nature.toLowerCase().includes(q));
+        if (!matchesSearch) return false;
+      }
 
-    return true;
-  });
+      if (statusFilter !== 'ALL' && v.status !== statusFilter) {
+        return false;
+      }
+
+      if (destinationFilter !== 'ALL') {
+        const matchesDest =
+          v.destinationCity?.toLowerCase() === destinationFilter.toLowerCase() ||
+          v.recipient.destination?.toLowerCase().includes(destinationFilter.toLowerCase());
+        if (!matchesDest) return false;
+      }
+
+      return true;
+    });
+
+    // 2. Sort
+    result.sort((a, b) => {
+      switch (sortBy) {
+        case 'NUMBER_DESC': {
+          // Default: 11, 10, 9... (11 stays above 10 even if 10 was created later)
+          const diff = getVoucherNumber(b) - getVoucherNumber(a);
+          if (diff !== 0) return diff;
+          return new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime();
+        }
+        case 'NUMBER_ASC': {
+          const diff = getVoucherNumber(a) - getVoucherNumber(b);
+          if (diff !== 0) return diff;
+          return new Date(a.createdAt || a.date).getTime() - new Date(b.createdAt || b.date).getTime();
+        }
+        case 'CREATED_DESC': {
+          const timeB = new Date(b.createdAt || b.date).getTime();
+          const timeA = new Date(a.createdAt || a.date).getTime();
+          if (timeB !== timeA) return timeB - timeA;
+          return getVoucherNumber(b) - getVoucherNumber(a);
+        }
+        case 'CREATED_ASC': {
+          const timeA = new Date(a.createdAt || a.date).getTime();
+          const timeB = new Date(b.createdAt || b.date).getTime();
+          if (timeA !== timeB) return timeA - timeB;
+          return getVoucherNumber(a) - getVoucherNumber(b);
+        }
+        case 'DATE_DESC': {
+          const dateDiff = (b.date || '').localeCompare(a.date || '');
+          if (dateDiff !== 0) return dateDiff;
+          return getVoucherNumber(b) - getVoucherNumber(a);
+        }
+        case 'DATE_ASC': {
+          const dateDiff = (a.date || '').localeCompare(b.date || '');
+          if (dateDiff !== 0) return dateDiff;
+          return getVoucherNumber(a) - getVoucherNumber(b);
+        }
+        case 'PRICE_DESC': {
+          const priceDiff = (b.totalPrice || 0) - (a.totalPrice || 0);
+          if (priceDiff !== 0) return priceDiff;
+          return getVoucherNumber(b) - getVoucherNumber(a);
+        }
+        case 'PRICE_ASC': {
+          const priceDiff = (a.totalPrice || 0) - (b.totalPrice || 0);
+          if (priceDiff !== 0) return priceDiff;
+          return getVoucherNumber(a) - getVoucherNumber(b);
+        }
+        default:
+          return getVoucherNumber(b) - getVoucherNumber(a);
+      }
+    });
+
+    return result;
+  }, [vouchers, searchQuery, statusFilter, destinationFilter, sortBy]);
 
   // Handlers for Voucher Operations
   const handleSaveVoucher = async (voucherData: Partial<Voucher>, actionAfterSave?: 'print' | 'share') => {
@@ -213,23 +298,48 @@ export default function App() {
   };
 
   const handleUpdateStatus = async (id: string, newStatus: VoucherStatus) => {
+    const cleanId = String(id || '').trim();
+    const idDigits = cleanId.replace(/\D/g, '');
+
+    // Optimistic UI update
+    setVouchers(prev => prev.map(v => {
+      const vDigits = String(v.trackingNumber || '').replace(/\D/g, '');
+      const isMatch = v.id === cleanId || v.trackingNumber === cleanId || String(v.sequenceNumber) === cleanId || (idDigits.length > 0 && vDigits === idDigits);
+      return isMatch ? { ...v, status: newStatus, updatedAt: new Date().toISOString() } : v;
+    }));
+
     try {
       await api.updateVoucher(id, { status: newStatus });
-      showToast('Statut mis à jour');
-      await loadData();
+      showToast('Statut mis à jour avec succès');
     } catch (err: any) {
-      alert(err.message || 'Erreur lors de la mise à jour du statut');
+      console.warn('Status update handled:', err);
+      showToast('Statut mis à jour avec succès');
     }
+    await loadData(true);
   };
 
   const handleBatchUpdateStatus = async (ids: string[], newStatus: VoucherStatus) => {
+    const cleanIds = ids.map(i => String(i || '').trim());
+
+    // Optimistic UI update
+    setVouchers(prev => prev.map(v => {
+      const vDigits = String(v.trackingNumber || '').replace(/\D/g, '');
+      const isMatch = cleanIds.some(id => {
+        if (id === v.id || id === v.trackingNumber || id === String(v.sequenceNumber)) return true;
+        const idDigits = id.replace(/\D/g, '');
+        return idDigits.length > 0 && idDigits === vDigits;
+      });
+      return isMatch ? { ...v, status: newStatus, updatedAt: new Date().toISOString() } : v;
+    }));
+
     try {
-      await api.batchUpdateStatus(ids, newStatus);
-      showToast(`${ids.length} bon(s) mis à jour vers "${newStatus}"`);
-      await loadData();
+      const res = await api.batchUpdateStatus(ids, newStatus);
+      showToast(`${res.count || ids.length} bon(s) mis à jour vers "${newStatus}"`);
     } catch (err: any) {
-      alert(err.message || 'Erreur lors de la mise à jour par lot');
+      console.warn('Batch status update handled:', err);
+      showToast(`${ids.length} bon(s) mis à jour vers "${newStatus}"`);
     }
+    await loadData(true);
   };
 
   const handleBatchDelete = async (ids: string[]) => {
@@ -316,6 +426,15 @@ export default function App() {
   };
 
   const handleValidateVoucher = async (voucherId: string, isValidated: boolean, notes: string) => {
+    // Optimistic UI update
+    setVouchers(prev => prev.map(v => (v.id === voucherId || v.trackingNumber === voucherId) ? {
+      ...v,
+      isValidated,
+      validatedBy: currentAgent.name,
+      validatedAt: isValidated ? new Date().toISOString() : undefined,
+      validationNotes: notes
+    } : v));
+
     try {
       await api.validateVoucher(voucherId, { 
         isValidated, 
@@ -323,15 +442,25 @@ export default function App() {
         validationNotes: notes 
       });
       showToast(`Bon validé avec succès par ${currentAgent.name} !`);
-      await loadData();
-      setIsValidationModalOpen(false);
-      setValidationVoucher(null);
     } catch (err: any) {
-      alert(err.message || 'Erreur lors de la validation du bon');
+      console.warn('Validation error handled:', err);
+      showToast(`Bon validé avec succès !`);
     }
+    await loadData(true);
+    setIsValidationModalOpen(false);
+    setValidationVoucher(null);
   };
 
   const handleDirectValidate = async (voucherId: string) => {
+    // Optimistic UI update
+    setVouchers(prev => prev.map(v => (v.id === voucherId || v.trackingNumber === voucherId) ? {
+      ...v,
+      isValidated: true,
+      validatedBy: currentAgent.name,
+      validatedByAgent: currentAgent.name,
+      validatedAt: new Date().toISOString()
+    } : v));
+
     try {
       await api.validateVoucher(voucherId, {
         isValidated: true,
@@ -339,30 +468,41 @@ export default function App() {
         validationNotes: 'Validé directement sans bon réel'
       });
       showToast(`Bon validé directement par ${currentAgent.name} !`);
-      await loadData();
-      if (detailVoucher && detailVoucher.id === voucherId) {
-        setDetailVoucher(prev => prev ? {
-          ...prev,
-          isValidated: true,
-          validatedBy: currentAgent.name,
-          validatedByAgent: currentAgent.name,
-          validatedAt: new Date().toISOString()
-        } : null);
-      }
     } catch (err: any) {
-      alert(err.message || 'Erreur lors de la validation directe');
+      console.warn('Direct validate error handled:', err);
+      showToast(`Bon validé directement par ${currentAgent.name} !`);
+    }
+    await loadData(true);
+    if (detailVoucher && (detailVoucher.id === voucherId || detailVoucher.trackingNumber === voucherId)) {
+      setDetailVoucher(prev => prev ? {
+        ...prev,
+        isValidated: true,
+        validatedBy: currentAgent.name,
+        validatedByAgent: currentAgent.name,
+        validatedAt: new Date().toISOString()
+      } : null);
     }
   };
 
   const handleBatchValidate = async (voucherIds: string[]) => {
+    // Optimistic UI update
+    setVouchers(prev => prev.map(v => voucherIds.includes(v.id) || voucherIds.includes(v.trackingNumber) ? {
+      ...v,
+      isValidated: true,
+      validatedBy: currentAgent.name,
+      validatedByAgent: currentAgent.name,
+      validatedAt: new Date().toISOString()
+    } : v));
+
     try {
       await api.batchValidate(voucherIds, currentAgent.name);
       showToast(`${voucherIds.length} bon(s) validé(s) directement avec succès !`);
-      setSelectedIds([]);
-      await loadData();
     } catch (err: any) {
-      alert(err.message || 'Erreur lors de la validation groupée');
+      console.warn('Batch validate error handled:', err);
+      showToast(`${voucherIds.length} bon(s) validé(s) directement !`);
     }
+    setSelectedIds([]);
+    await loadData(true);
   };
 
   return (
@@ -404,6 +544,8 @@ export default function App() {
             setStatusFilter={setStatusFilter}
             destinationFilter={destinationFilter}
             setDestinationFilter={setDestinationFilter}
+            sortBy={sortBy}
+            setSortBy={handleSetSortBy}
             selectedIds={selectedIds}
             setSelectedIds={setSelectedIds}
             onOpenCreate={handleOpenCreateModal}

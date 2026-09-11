@@ -184,3 +184,13 @@ export interface VoucherStats {
   todayCount: number;
   todayRevenue: number;
 }
+
+export type VoucherSortOption = 
+  | 'NUMBER_DESC'
+  | 'NUMBER_ASC'
+  | 'CREATED_DESC'
+  | 'CREATED_ASC'
+  | 'DATE_DESC'
+  | 'DATE_ASC'
+  | 'PRICE_DESC'
+  | 'PRICE_ASC';

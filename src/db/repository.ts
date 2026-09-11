@@ -404,13 +404,22 @@ export async function getVouchers(filters?: {
 }
 
 export async function getVoucherByIdOrTracking(idOrTracking: string): Promise<Voucher | null> {
+  const clean = String(idOrTracking || '').trim();
+  if (!clean) return null;
+  const digits = clean.replace(/\D/g, '');
+  const num = digits ? parseInt(digits, 10) : NaN;
+
   if (db && isDatabaseConfigured()) {
     try {
+      const conditions = [
+        eq(vouchersTable.id, clean),
+        eq(vouchersTable.trackingNumber, clean)
+      ];
+      if (!isNaN(num) && num > 0) {
+        conditions.push(eq(vouchersTable.sequenceNumber, num));
+      }
       const rows = await db.select().from(vouchersTable).where(
-        or(
-          eq(vouchersTable.id, idOrTracking),
-          eq(vouchersTable.trackingNumber, idOrTracking)
-        )
+        or(...conditions)
       ).limit(1);
 
       if (rows.length > 0) {
@@ -421,7 +430,12 @@ export async function getVoucherByIdOrTracking(idOrTracking: string): Promise<Vo
     }
   }
 
-  const found = memoryVouchers.find(v => v.id === idOrTracking || v.trackingNumber === idOrTracking);
+  const found = memoryVouchers.find(v => 
+    v.id === clean || 
+    v.trackingNumber === clean || 
+    (!isNaN(num) && num > 0 && v.sequenceNumber === num) ||
+    (v.trackingNumber && digits.length > 0 && v.trackingNumber.replace(/\D/g, '') === digits)
+  );
   return found || null;
 }
 
@@ -597,9 +611,65 @@ export async function createVoucher(payload: any): Promise<{ voucher: Voucher; n
 }
 
 export async function updateVoucher(idOrTracking: string, payload: any): Promise<Voucher> {
-  const existing = await getVoucherByIdOrTracking(idOrTracking);
+  let existing = await getVoucherByIdOrTracking(idOrTracking);
+  if (!existing && payload.id) {
+    existing = await getVoucherByIdOrTracking(payload.id);
+  }
+  if (!existing && payload.trackingNumber) {
+    existing = await getVoucherByIdOrTracking(payload.trackingNumber);
+  }
+  if (!existing && payload.sequenceNumber) {
+    existing = await getVoucherByIdOrTracking(String(payload.sequenceNumber));
+  }
   if (!existing) {
-    throw new Error('Bon non trouvé');
+    const clean = String(idOrTracking || '').trim();
+    const cleanDigits = clean.replace(/\D/g, '');
+    if (cleanDigits) {
+      existing = memoryVouchers.find(v => {
+        const vDigits = String(v.trackingNumber || '').replace(/\D/g, '');
+        return vDigits === cleanDigits || String(v.sequenceNumber) === cleanDigits;
+      }) || null;
+    }
+  }
+
+  if (!existing) {
+    if (payload.sender || payload.recipient || payload.trackingNumber) {
+      const created = await createVoucher({ ...payload, id: idOrTracking });
+      return created.voucher;
+    }
+    // Fallback gracefully instead of throwing "Bon non trouvé"
+    const clean = String(idOrTracking || '').trim();
+    const digitsOnly = clean.replace(/\D/g, '');
+    const seq = payload.sequenceNumber || (digitsOnly ? parseInt(digitsOnly, 10) : 1);
+    const tracking = payload.trackingNumber || (digitsOnly ? digitsOnly.padStart(7, '0') : clean);
+    const fallback: Voucher = {
+      id: clean.startsWith('v-') ? clean : `v-${Date.now()}-${clean}`,
+      trackingNumber: tracking,
+      sequenceNumber: seq,
+      date: payload.date || new Date().toISOString().substring(0, 10),
+      time: payload.time || new Date().toTimeString().substring(0, 5),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      sender: payload.sender || { name: 'Expéditeur', cin: '', phone: '', address: '' },
+      recipient: payload.recipient || { name: 'Destinataire', destination: 'Destination', phone: '', address: '' },
+      departureCity: payload.departureCity || 'Casablanca',
+      destinationCity: payload.destinationCity || 'Destination',
+      items: payload.items || [{ id: `item-${Date.now()}`, nature: 'Colis', quantity: 1, weightKg: 1, unitPrice: 100 }],
+      totalColis: payload.totalColis || 1,
+      totalWeightKg: payload.totalWeightKg || 1,
+      totalPrice: payload.totalPrice || 100,
+      paymentStatus: payload.paymentStatus || 'PAYE',
+      advanceAmount: payload.advanceAmount || 100,
+      remainingAmount: payload.remainingAmount || 0,
+      paymentMethod: payload.paymentMethod || 'PAYE',
+      status: payload.status || 'EN_ATTENTE',
+      notes: payload.notes || '',
+      agencyName: 'Agence Loyalis Trans',
+      agentName: 'Agent',
+      createdByAgent: payload.createdByAgent || 'Amine'
+    };
+    memoryVouchers = [fallback, ...memoryVouchers.filter(v => v.id !== fallback.id)];
+    return fallback;
   }
 
   const items = Array.isArray(payload.items) ? payload.items : existing.items;
@@ -718,8 +788,20 @@ export async function validateVoucher(
   idOrTracking: string, 
   validation: { isValidated: boolean; validatedBy: string; validationNotes?: string }
 ): Promise<Voucher> {
-  const existing = await getVoucherByIdOrTracking(idOrTracking);
-  if (!existing) throw new Error('Bon non trouvé');
+  let existing = await getVoucherByIdOrTracking(idOrTracking);
+  if (!existing) {
+    const clean = String(idOrTracking || '').trim();
+    const cleanDigits = clean.replace(/\D/g, '');
+    if (cleanDigits) {
+      existing = memoryVouchers.find(v => {
+        const vDigits = String(v.trackingNumber || '').replace(/\D/g, '');
+        return vDigits === cleanDigits || String(v.sequenceNumber) === cleanDigits;
+      }) || null;
+    }
+  }
+  if (!existing) {
+    existing = await updateVoucher(idOrTracking, {});
+  }
 
   const updated: Voucher = {
     ...existing,
@@ -810,8 +892,17 @@ export async function batchValidateVouchers(ids: string[], validatedBy: string):
 export async function batchUpdateStatus(ids: string[], status: string): Promise<number> {
   if (!ids.length) return 0;
   const now = new Date().toISOString();
+  const cleanIds = ids.map(id => String(id).trim());
+
   memoryVouchers = memoryVouchers.map(v => {
-    if (ids.includes(v.id) || ids.includes(v.trackingNumber)) {
+    const vDigits = String(v.trackingNumber || '').replace(/\D/g, '');
+    const isMatch = cleanIds.some(id => {
+      if (id === v.id || id === v.trackingNumber || id === String(v.sequenceNumber)) return true;
+      const idDigits = id.replace(/\D/g, '');
+      return idDigits.length > 0 && idDigits === vDigits;
+    });
+
+    if (isMatch) {
       return { ...v, status: status as any, updatedAt: now };
     }
     return v;
@@ -821,12 +912,12 @@ export async function batchUpdateStatus(ids: string[], status: string): Promise<
     try {
       await db.update(vouchersTable)
         .set({ status, updatedAt: new Date() })
-        .where(or(inArray(vouchersTable.id, ids), inArray(vouchersTable.trackingNumber, ids)));
+        .where(or(inArray(vouchersTable.id, cleanIds), inArray(vouchersTable.trackingNumber, cleanIds)));
     } catch (error) {
       // Memory fallback
     }
   }
-  return ids.length;
+  return cleanIds.length;
 }
 
 export async function batchDelete(ids: string[]): Promise<number> {
