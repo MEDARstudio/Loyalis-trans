@@ -22,9 +22,16 @@ import {
   RefreshCw,
   ExternalLink,
   ShieldCheck,
-  ArrowRight
+  ArrowRight,
+  Users,
+  Lock,
+  Key,
+  Eye,
+  EyeOff,
+  Shield,
+  UserCheck
 } from 'lucide-react';
-import { CompanySettings, Voucher } from '../types';
+import { CompanySettings, Voucher, AgentProfile } from '../types';
 import { formatTrackingNumber } from '../utils/formatters';
 import { ConfirmModal } from './ConfirmModal';
 import { 
@@ -37,14 +44,22 @@ import {
   supabaseApi
 } from '../services/supabase';
 import { api } from '../services/api';
+import { 
+  getStoredAgents, 
+  createNewAgentProfile, 
+  updateAgentProfile, 
+  deleteAgentProfile 
+} from '../services/agentAuth';
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   settings: CompanySettings;
   vouchers?: Voucher[];
+  currentAgent?: AgentProfile;
   onSaveSettings: (newSettings: CompanySettings) => Promise<void>;
   onResetDemo: () => Promise<void>;
+  onAgentsUpdated?: () => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -52,16 +67,33 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onClose,
   settings,
   vouchers,
+  currentAgent,
   onSaveSettings,
-  onResetDemo
+  onResetDemo,
+  onAgentsUpdated
 }) => {
   const [formData, setFormData] = useState<CompanySettings>(settings);
-  const [activeTab, setActiveTab] = useState<'numbering' | 'company' | 'agencies' | 'terms' | 'supabase'>('numbering');
+  const [activeTab, setActiveTab] = useState<'numbering' | 'company' | 'agencies' | 'profiles' | 'terms' | 'supabase'>('numbering');
   const [newAgencyInput, setNewAgencyInput] = useState<string>('');
   const [newNatureInput, setNewNatureInput] = useState<string>('');
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState<boolean>(false);
+
+  // Profiles Management State (Amine Admin)
+  const [agentsList, setAgentsList] = useState<AgentProfile[]>([]);
+  const [showPasswordAgentIds, setShowPasswordAgentIds] = useState<string[]>([]);
+  const [profileActionFeedback, setProfileActionFeedback] = useState<string | null>(null);
+  
+  // New Agent Form
+  const [newAgentName, setNewAgentName] = useState<string>('');
+  const [newAgentUsername, setNewAgentUsername] = useState<string>('');
+  const [newAgentPassword, setNewAgentPassword] = useState<string>('');
+  const [newAgentRole, setNewAgentRole] = useState<'ADMIN' | 'AGENT'>('AGENT');
+  const [newAgentAgency, setNewAgentAgency] = useState<string>('Casablanca');
+  const [newAgentCanDelete, setNewAgentCanDelete] = useState<boolean>(false);
+  const [newAgentCanValidate, setNewAgentCanValidate] = useState<boolean>(false);
+  const [newAgentPhone, setNewAgentPhone] = useState<string>('');
 
   // Calculate the highest sequence number from existing vouchers
   const { lastVoucher, lastVoucherSeq } = useMemo(() => {
@@ -100,6 +132,79 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
     prevIsOpenRef.current = isOpen;
   }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setAgentsList(getStoredAgents());
+      setProfileActionFeedback(null);
+    }
+  }, [isOpen]);
+
+  const handleToggleShowPassword = (id: string) => {
+    if (showPasswordAgentIds.includes(id)) {
+      setShowPasswordAgentIds(showPasswordAgentIds.filter(i => i !== id));
+    } else {
+      setShowPasswordAgentIds([...showPasswordAgentIds, id]);
+    }
+  };
+
+  const handleCreateNewAgent = (e: React.FormEvent) => {
+    e.preventDefault();
+    setProfileActionFeedback(null);
+    const res = createNewAgentProfile({
+      name: newAgentName,
+      username: newAgentUsername,
+      password: newAgentPassword,
+      role: newAgentRole,
+      agencyCity: newAgentAgency,
+      canDelete: newAgentCanDelete,
+      canValidate: newAgentCanValidate,
+      phone: newAgentPhone
+    });
+
+    if (res.success) {
+      setAgentsList(getStoredAgents());
+      setNewAgentName('');
+      setNewAgentUsername('');
+      setNewAgentPassword('');
+      setNewAgentRole('AGENT');
+      setNewAgentCanDelete(false);
+      setNewAgentCanValidate(false);
+      setNewAgentPhone('');
+      setProfileActionFeedback(`Profil "${res.agent?.name}" créé avec succès !`);
+      if (onAgentsUpdated) onAgentsUpdated();
+    } else {
+      setProfileActionFeedback(`Erreur : ${res.error}`);
+    }
+  };
+
+  const handleChangeAgentRole = (agentId: string, role: 'ADMIN' | 'AGENT') => {
+    const res = updateAgentProfile(agentId, { role });
+    if (res.success) {
+      setAgentsList(getStoredAgents());
+      setProfileActionFeedback(`Rôle mis à jour pour ${res.agent?.name}.`);
+      if (onAgentsUpdated) onAgentsUpdated();
+    }
+  };
+
+  const handleTogglePermission = (agentId: string, perm: 'canDelete' | 'canValidate', val: boolean) => {
+    const res = updateAgentProfile(agentId, { [perm]: val });
+    if (res.success) {
+      setAgentsList(getStoredAgents());
+      if (onAgentsUpdated) onAgentsUpdated();
+    }
+  };
+
+  const handleDeleteAgentClick = (agentId: string) => {
+    const res = deleteAgentProfile(agentId);
+    if (res.success) {
+      setAgentsList(getStoredAgents());
+      setProfileActionFeedback('Profil supprimé avec succès.');
+      if (onAgentsUpdated) onAgentsUpdated();
+    } else {
+      setProfileActionFeedback(`Erreur : ${res.error}`);
+    }
+  };
 
   const checkSupabase = async () => {
     setSupabaseStatus({ testing: true });
@@ -258,6 +363,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           >
             <MapPin className="w-4 h-4" />
             <span>Agences & Natures</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('profiles')}
+            className={`pb-2.5 px-3 border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+              activeTab === 'profiles'
+                ? 'border-orange-500 text-orange-600 dark:text-orange-400'
+                : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
+            }`}
+          >
+            <Users className="w-4 h-4 text-orange-500" />
+            <span>Profils & Rôles</span>
           </button>
 
           <button
@@ -882,6 +999,306 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     {syncResult}
                   </div>
                 )}
+              </div>
+
+            </div>
+          )}
+
+          {/* TAB 4: Profiles & Roles Management (Amine Admin) */}
+          {activeTab === 'profiles' && (
+            <div className="space-y-6">
+              
+              {/* Header Info */}
+              <div className="p-4 rounded-2xl bg-orange-500/10 border border-orange-500/30 flex items-start gap-3.5">
+                <div className="w-10 h-10 rounded-xl bg-orange-500/20 text-orange-400 flex items-center justify-center shrink-0">
+                  <Shield className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black uppercase text-slate-900 dark:text-white">
+                    Gestion des Profils & Permissions d'Accès
+                  </h3>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5 leading-relaxed">
+                    En tant qu'administrateur principal (Amine), vous pouvez créer de nouveaux comptes, attribuer les rôles et permissions (validation, suppression), ou révoquer les accès. Les identifiants et mots de passe sont strictement protégés et confidentiels.
+                  </p>
+                </div>
+              </div>
+
+              {/* Feedback Alert */}
+              {profileActionFeedback && (
+                <div className={`p-3 rounded-xl text-xs font-bold flex items-center gap-2 ${
+                  profileActionFeedback.startsWith('Erreur') 
+                    ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-300 dark:border-rose-800' 
+                    : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
+                }`}>
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                  <span>{profileActionFeedback}</span>
+                </div>
+              )}
+
+              {/* Existing Profiles List */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                    <Users className="w-4 h-4 text-orange-500" />
+                    <span>Profils Actifs ({agentsList.length})</span>
+                  </h4>
+                  <span className="text-[11px] text-slate-400">
+                    Cliquez sur l'icône oeil pour révéler les accès administrateur
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  {agentsList.map((ag) => {
+                    const isAmineAdmin = ag.username === '010904' || ag.name.toLowerCase() === 'amine';
+                    const showCreds = showPasswordAgentIds.includes(ag.id);
+
+                    return (
+                      <div 
+                        key={ag.id}
+                        className="p-4 rounded-2xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3"
+                      >
+                        {/* Profile Header */}
+                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800/80 pb-3">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm ${
+                              ag.role === 'ADMIN'
+                                ? 'bg-orange-500 text-white shadow-sm'
+                                : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                            }`}>
+                              {ag.name.substring(0, 2).toUpperCase()}
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-black text-slate-900 dark:text-white">
+                                  {ag.name}
+                                </span>
+                                {isAmineAdmin && (
+                                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-400 border border-orange-200 dark:border-orange-800">
+                                    Admin Principal
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-xs text-slate-500 dark:text-slate-400">
+                                Agence : <strong>{ag.agencyCity || 'Non définie'}</strong>
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Role Switcher */}
+                          <div className="flex items-center gap-2">
+                            <label className="text-xs font-bold text-slate-500">Rôle :</label>
+                            <select
+                              value={ag.role}
+                              onChange={(e) => handleChangeAgentRole(ag.id, e.target.value as 'ADMIN' | 'AGENT')}
+                              disabled={isAmineAdmin}
+                              className="px-2.5 py-1 text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:border-orange-500 disabled:opacity-60"
+                            >
+                              <option value="ADMIN">ADMINISTRATEUR</option>
+                              <option value="AGENT">AGENT DE GUICHET</option>
+                            </select>
+
+                            {!isAmineAdmin && (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteAgentClick(ag.id)}
+                                className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-950 transition-colors cursor-pointer"
+                                title="Supprimer ce profil"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Confidential Credentials Display */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 dark:bg-slate-900/60 p-3 rounded-xl border border-slate-100 dark:border-slate-800/60 text-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-500 font-medium">Identifiant :</span>
+                            <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                              {showCreds ? ag.username : '••••••'}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-slate-500 font-medium">Mot de passe :</span>
+                              <button
+                                type="button"
+                                onClick={() => handleToggleShowPassword(ag.id)}
+                                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                                title={showCreds ? 'Masquer' : 'Afficher'}
+                              >
+                                {showCreds ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                              </button>
+                            </div>
+                            <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                              {showCreds ? (ag.password || 'Non configuré') : '••••••'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Permissions Checkboxes */}
+                        <div className="flex flex-wrap items-center gap-4 pt-1">
+                          <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={ag.canValidate || false}
+                              onChange={(e) => handleTogglePermission(ag.id, 'canValidate', e.target.checked)}
+                              className="w-4 h-4 text-orange-600 rounded border-slate-300 focus:ring-orange-500"
+                            />
+                            <span>Peut valider les bons</span>
+                          </label>
+
+                          <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={ag.canDelete || false}
+                              onChange={(e) => handleTogglePermission(ag.id, 'canDelete', e.target.checked)}
+                              className="w-4 h-4 text-orange-600 rounded border-slate-300 focus:ring-orange-500"
+                            />
+                            <span>Peut supprimer les bons</span>
+                          </label>
+                        </div>
+
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Create New Agent Profile Card */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-slate-950 border-2 border-dashed border-slate-300 dark:border-slate-800 space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-orange-500 text-white flex items-center justify-center">
+                    <Plus className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
+                      Créer un nouveau profil agent
+                    </h4>
+                    <p className="text-[11px] text-slate-500">
+                      Remplissez l'identifiant et le mot de passe pour autoriser un nouveau collaborateur
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
+                      Nom complet
+                    </label>
+                    <input
+                      type="text"
+                      value={newAgentName}
+                      onChange={(e) => setNewAgentName(e.target.value)}
+                      placeholder="Ex: Karim ou Fatima"
+                      className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 font-bold focus:outline-none focus:border-orange-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
+                      Ville d'agence
+                    </label>
+                    <select
+                      value={newAgentAgency}
+                      onChange={(e) => setNewAgentAgency(e.target.value)}
+                      className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 font-bold focus:outline-none focus:border-orange-500"
+                    >
+                      {formData.defaultAgencies.map((ag) => (
+                        <option key={ag} value={ag}>{ag}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
+                      Identifiant de connexion
+                    </label>
+                    <input
+                      type="text"
+                      value={newAgentUsername}
+                      onChange={(e) => setNewAgentUsername(e.target.value)}
+                      placeholder="Ex: 010905 ou agent_casa"
+                      className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 font-mono font-bold focus:outline-none focus:border-orange-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
+                      Mot de passe
+                    </label>
+                    <input
+                      type="text"
+                      value={newAgentPassword}
+                      onChange={(e) => setNewAgentPassword(e.target.value)}
+                      placeholder="Mot de passe secret..."
+                      className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 font-mono font-bold focus:outline-none focus:border-orange-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
+                      Rôle
+                    </label>
+                    <select
+                      value={newAgentRole}
+                      onChange={(e) => setNewAgentRole(e.target.value as 'ADMIN' | 'AGENT')}
+                      className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 font-bold focus:outline-none focus:border-orange-500"
+                    >
+                      <option value="AGENT">AGENT DE GUICHET</option>
+                      <option value="ADMIN">ADMINISTRATEUR</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
+                      Téléphone (optionnel)
+                    </label>
+                    <input
+                      type="tel"
+                      value={newAgentPhone}
+                      onChange={(e) => setNewAgentPhone(e.target.value)}
+                      placeholder="06..."
+                      className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs font-bold focus:outline-none focus:border-orange-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Permissions for new agent */}
+                <div className="flex flex-wrap items-center gap-4 pt-1">
+                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={newAgentCanValidate}
+                      onChange={(e) => setNewAgentCanValidate(e.target.checked)}
+                      className="w-4 h-4 text-orange-600 rounded border-slate-300 focus:ring-orange-500"
+                    />
+                    <span>Peut valider les bons</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={newAgentCanDelete}
+                      onChange={(e) => setNewAgentCanDelete(e.target.checked)}
+                      className="w-4 h-4 text-orange-600 rounded border-slate-300 focus:ring-orange-500"
+                    />
+                    <span>Peut supprimer les bons</span>
+                  </label>
+                </div>
+
+                <div className="flex justify-end pt-2">
+                  <button
+                    type="button"
+                    onClick={handleCreateNewAgent}
+                    className="px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-black uppercase tracking-wider flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Créer le Profil</span>
+                  </button>
+                </div>
+
               </div>
 
             </div>

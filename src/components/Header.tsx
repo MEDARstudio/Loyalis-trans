@@ -18,9 +18,11 @@ import {
   User, 
   ShieldCheck, 
   CheckCircle2, 
-  Layers
+  Layers,
+  LogOut
 } from 'lucide-react';
 import { CompanySettings, AgentProfile, DEFAULT_AGENTS } from '../types';
+import { getStoredAgents } from '../services/agentAuth';
 
 interface HeaderProps {
   activeTab: 'list' | 'tracking' | 'stats' | 'history';
@@ -34,6 +36,7 @@ interface HeaderProps {
   vouchersCount: number;
   currentAgent: AgentProfile;
   onSelectAgent: (agent: AgentProfile) => void;
+  onLogout?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -47,12 +50,15 @@ export const Header: React.FC<HeaderProps> = ({
   onRefreshData,
   vouchersCount,
   currentAgent,
-  onSelectAgent
+  onSelectAgent,
+  onLogout
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [isAgentMenuOpen, setIsAgentMenuOpen] = useState<boolean>(false);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const agentMenuRef = useRef<HTMLDivElement>(null);
+  
+  const allAgents = getStoredAgents();
 
   // Close desktop agent dropdown when clicking outside
   useEffect(() => {
@@ -291,9 +297,9 @@ export const Header: React.FC<HeaderProps> = ({
                   className="absolute right-0 top-full mt-2 w-64 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl p-2 z-50 animate-fadeIn space-y-1 text-slate-200"
                 >
                   <div className="px-3 py-2 border-b border-slate-800 text-[10px] font-black uppercase tracking-wider text-slate-400">
-                    Sélectionner un Profil Utilisateur
+                    Profils Utilisateurs
                   </div>
-                  {DEFAULT_AGENTS.map(agent => {
+                  {allAgents.map(agent => {
                     const isActive = currentAgent?.id === agent.id;
                     return (
                       <button
@@ -326,18 +332,29 @@ export const Header: React.FC<HeaderProps> = ({
                               {agent.role === 'ADMIN' ? 'Admin' : 'Agent'}
                             </span>
                           </div>
-                          <p className={`text-[11px] truncate mt-0.5 ${isActive ? 'text-orange-100' : 'text-slate-400'}`}>
-                            {agent.name === 'Amine' 
-                              ? 'Admin (Validation & Suppression)' 
-                              : 'Agence Casa (Saisie des bons)'}
-                          </p>
                           <div className={`text-[10px] mt-0.5 font-bold ${isActive ? 'text-white' : 'text-orange-400'}`}>
-                            Ville : {agent.agencyCity}
+                            Agence : {agent.agencyCity || 'Non spécifiée'}
                           </div>
                         </div>
                       </button>
                     );
                   })}
+
+                  {onLogout && (
+                    <div className="pt-1 border-t border-slate-800 mt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAgentMenuOpen(false);
+                          onLogout();
+                        }}
+                        className="w-full p-2 rounded-xl text-rose-400 hover:bg-rose-950/50 hover:text-rose-300 text-xs font-bold flex items-center gap-2 transition-colors cursor-pointer"
+                      >
+                        <LogOut className="w-3.5 h-3.5" />
+                        <span>Déconnexion / Portail Public</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -637,7 +654,7 @@ export const Header: React.FC<HeaderProps> = ({
 
                 {/* 1-Tap Agent Switch Buttons */}
                 <div className="pt-2.5 border-t border-slate-700/80 grid grid-cols-2 gap-1.5">
-                  {DEFAULT_AGENTS.map(agent => {
+                  {allAgents.map(agent => {
                     const isActive = currentAgent?.id === agent.id;
                     return (
                       <button
@@ -657,6 +674,22 @@ export const Header: React.FC<HeaderProps> = ({
                     );
                   })}
                 </div>
+
+                {onLogout && (
+                  <div className="pt-2 border-t border-slate-800 mt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        onLogout();
+                      }}
+                      className="w-full py-2 px-3 rounded-xl bg-rose-950/40 border border-rose-800 text-rose-300 text-xs font-bold flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                      <span>Déconnexion / Portail Public</span>
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Primary Action Button: Nouveau Bon */}

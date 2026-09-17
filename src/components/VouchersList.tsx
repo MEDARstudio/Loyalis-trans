@@ -62,6 +62,7 @@ interface VouchersListProps {
   onBatchUpdateStatus: (ids: string[], status: VoucherStatus) => void;
   onBatchDelete: (ids: string[]) => void;
   onOpenExcelExport: () => void;
+  onBatchShare?: (selectedVouchers: Voucher[]) => void;
   currentAgent?: AgentProfile;
   onOpenValidation?: (voucher: Voucher) => void;
   onDirectValidate?: (voucherId: string) => void;
@@ -91,6 +92,7 @@ export const VouchersList: React.FC<VouchersListProps> = ({
   onBatchUpdateStatus,
   onBatchDelete,
   onOpenExcelExport,
+  onBatchShare,
   currentAgent,
   onOpenValidation,
   onDirectValidate,
@@ -267,6 +269,23 @@ export const VouchersList: React.FC<VouchersListProps> = ({
                 >
                   <ShieldCheck className="w-3.5 h-3.5" />
                   <span>Valider Direct ({selectedIds.length})</span>
+                </button>
+              )}
+
+              {/* Batch Share Digital Vouchers */}
+              {onBatchShare && (
+                <button
+                  id="btn-batch-share-digital"
+                  type="button"
+                  onClick={() => {
+                    const selectedVouchersList = vouchers.filter(v => selectedIds.includes(v.id));
+                    onBatchShare(selectedVouchersList);
+                  }}
+                  className="px-2.5 py-1 rounded bg-orange-600 hover:bg-orange-700 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-xs cursor-pointer transition-colors"
+                  title="Partager les bons digitaux sous forme d'images prêtes pour WhatsApp ou téléchargement"
+                >
+                  <Share2 className="w-3.5 h-3.5" />
+                  <span>Partager Bons Digitaux ({selectedIds.length})</span>
                 </button>
               )}
 

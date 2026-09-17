@@ -11,9 +11,13 @@ import { TrackingLookup } from './components/TrackingLookup';
 import { StatsDashboard } from './components/StatsDashboard';
 import { HistoryStatementsView } from './components/HistoryStatementsView';
 import { VoucherValidationModal } from './components/VoucherValidationModal';
+import { PublicTrackingPortal } from './components/PublicTrackingPortal';
+import { LoginModal } from './components/LoginModal';
+import { BatchShareModal } from './components/BatchShareModal';
 import { CompanySettings, Voucher, VoucherStats, VoucherStatus, AgentProfile, DEFAULT_AGENTS, VoucherSortOption } from './types';
 import { api } from './services/api';
-import { PlusCircle, Search, RefreshCw, AlertCircle, Sparkles, Package, BarChart3, History, Plus } from 'lucide-react';
+import { getCurrentSession, endCurrentSession } from './services/agentAuth';
+import { PlusCircle, Search, RefreshCw, AlertCircle, Sparkles, Package, BarChart3, History, Plus, ArrowRight, LogOut, ShieldCheck } from 'lucide-react';
 
 const DEFAULT_SETTINGS_FALLBACK: CompanySettings = {
   companyName: 'Loyalis Trans',
@@ -105,8 +109,24 @@ export default function App() {
   const [isValidationModalOpen, setIsValidationModalOpen] = useState<boolean>(false);
   const [validationVoucher, setValidationVoucher] = useState<Voucher | null>(null);
 
-  // Active Agent Profile (Amine - Admin or Sofiane - Agent)
-  const [currentAgent, setCurrentAgent] = useState<AgentProfile>(DEFAULT_AGENTS[0]);
+  // Active Agent Profile & Authentication Session
+  const [sessionAgent, setSessionAgent] = useState<AgentProfile | null>(() => {
+    return getCurrentSession();
+  });
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState<boolean>(false);
+  const [currentAgent, setCurrentAgent] = useState<AgentProfile>(() => {
+    return getCurrentSession() || DEFAULT_AGENTS[0];
+  });
+
+  // Batch Digital Voucher Share Modal
+  const [isBatchShareModalOpen, setIsBatchShareModalOpen] = useState<boolean>(false);
+  const [batchShareVouchers, setBatchShareVouchers] = useState<Voucher[]>([]);
+
+  const handleLogout = () => {
+    endCurrentSession();
+    setSessionAgent(null);
+    showToast('Déconnexion réussie. Bienvenue sur le portail public de suivi.');
+  };
 
   // Notification Toast
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -505,6 +525,37 @@ export default function App() {
     await loadData(true);
   };
 
+  // If no authenticated agent session, display Public Tracking Portal with quick Login Modal
+  if (!sessionAgent) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-orange-500 selection:text-white">
+        {/* Toast Notification */}
+        {toastMessage && (
+          <div className="fixed bottom-5 right-4 sm:right-5 z-50 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-2xl border border-orange-500/40 flex items-center gap-3 animate-slideUp text-sm font-semibold max-w-[calc(100vw-2rem)]">
+            <div className="w-2.5 h-2.5 rounded-full bg-orange-500 animate-ping shrink-0" />
+            <span className="truncate">{toastMessage}</span>
+          </div>
+        )}
+
+        <PublicTrackingPortal
+          vouchers={vouchers}
+          settings={settings}
+          onOpenLogin={() => setIsLoginModalOpen(true)}
+        />
+
+        <LoginModal
+          isOpen={isLoginModalOpen}
+          onClose={() => setIsLoginModalOpen(false)}
+          onLoginSuccess={(agent) => {
+            setSessionAgent(agent);
+            setCurrentAgent(agent);
+            showToast(`Bienvenue ${agent.name} ! Accès autorisé au tableau de bord.`);
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-orange-500 selection:text-white">
       
@@ -515,6 +566,32 @@ export default function App() {
           <span className="truncate">{toastMessage}</span>
         </div>
       )}
+
+      {/* Top Admin/Agent Session Bar */}
+      <div className="bg-slate-900 border-b border-slate-800 text-xs text-slate-300 py-1.5 px-4 flex items-center justify-between z-30">
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span className="text-xs text-slate-300">
+            Session active : <strong className="text-white font-bold">{sessionAgent.name}</strong> 
+            <span className="ml-1.5 text-[10px] font-black uppercase px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400 border border-orange-500/30">
+              {sessionAgent.role === 'ADMIN' ? 'Administrateur' : 'Agent'}
+            </span>
+            {sessionAgent.agencyCity && (
+              <span className="ml-1.5 text-slate-400 text-[11px]">({sessionAgent.agencyCity})</span>
+            )}
+          </span>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="text-orange-400 hover:text-orange-300 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-colors"
+          title="Se déconnecter et retourner au portail public"
+        >
+          <span>Portail Public Visiteurs</span>
+          <LogOut className="w-3.5 h-3.5" />
+        </button>
+      </div>
 
       {/* Main Header */}
       <Header
@@ -529,6 +606,7 @@ export default function App() {
         vouchersCount={vouchers.length}
         currentAgent={currentAgent}
         onSelectAgent={setCurrentAgent}
+        onLogout={handleLogout}
       />
 
       {/* Main Content Area */}
@@ -558,6 +636,10 @@ export default function App() {
             onBatchUpdateStatus={handleBatchUpdateStatus}
             onBatchDelete={handleBatchDelete}
             onOpenExcelExport={() => setIsExcelModalOpen(true)}
+            onBatchShare={(selectedList) => {
+              setBatchShareVouchers(selectedList);
+              setIsBatchShareModalOpen(true);
+            }}
             currentAgent={currentAgent}
             onOpenValidation={handleOpenValidationModal}
             onDirectValidate={handleDirectValidate}
@@ -685,6 +767,19 @@ export default function App() {
         />
       )}
 
+      {/* 3.5 Batch Share Modal (Images Digitales des Bons Sélectionnés) */}
+      {isBatchShareModalOpen && (
+        <BatchShareModal
+          isOpen={isBatchShareModalOpen}
+          onClose={() => {
+            setIsBatchShareModalOpen(false);
+            setBatchShareVouchers([]);
+          }}
+          selectedVouchers={batchShareVouchers}
+          settings={settings}
+        />
+      )}
+
       {/* 4. Excel Export Modal */}
       <ExcelExportModal
         isOpen={isExcelModalOpen}
@@ -695,14 +790,16 @@ export default function App() {
         settings={settings}
       />
 
-      {/* 5. Settings Modal */}
+      {/* 5. Settings Modal with Role & Profile Management */}
       <SettingsModal
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
         settings={settings}
         vouchers={vouchers}
+        currentAgent={sessionAgent || currentAgent}
         onSaveSettings={handleSaveSettings}
         onResetDemo={handleResetDemo}
+        onAgentsUpdated={() => loadData(true)}
       />
 
     </div>

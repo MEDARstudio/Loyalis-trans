@@ -10,38 +10,33 @@ export type AgentRole = 'ADMIN' | 'AGENT';
 
 export interface AgentProfile {
   id: string;
-  name: string; // 'Amine' | 'Sofiane'
+  name: string; // e.g. 'Amine'
+  username: string; // e.g. '010904' (Identifiant)
+  password?: string; // e.g. '010904' (Mot de passe)
   role: AgentRole;
-  agencyCity: string; // 'Agadir' | 'Casablanca'
+  agencyCity: string; // e.g. 'Agadir' | 'Casablanca'
   canDelete: boolean;
   canValidate: boolean;
   color?: string;
   avatarInitials?: string;
   phone?: string;
+  createdAt?: string;
 }
 
 export const DEFAULT_AGENTS: AgentProfile[] = [
   {
     id: 'agent-amine',
     name: 'Amine',
+    username: '010904',
+    password: '010904',
     role: 'ADMIN',
     agencyCity: 'Agadir',
     canDelete: true,
     canValidate: true,
     color: 'orange',
     avatarInitials: 'AM',
-    phone: '+212 6 61 00 00 01'
-  },
-  {
-    id: 'agent-sofiane',
-    name: 'Sofiane',
-    role: 'AGENT',
-    agencyCity: 'Casablanca',
-    canDelete: false,
-    canValidate: false,
-    color: 'blue',
-    avatarInitials: 'SO',
-    phone: '+212 6 62 00 00 02'
+    phone: '+212 6 61 00 00 01',
+    createdAt: '2025-01-01T00:00:00.000Z'
   }
 ];
 
