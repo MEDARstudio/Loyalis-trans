@@ -645,38 +645,38 @@ export const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-950/85 overflow-y-auto">
-      <div className="relative w-full max-w-4xl bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden my-auto max-h-[92vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-slate-950/85 overflow-y-auto">
+      <div className="relative w-full max-w-4xl bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden my-auto max-h-[96vh] sm:max-h-[92vh] flex flex-col">
         
         {/* Modal Header */}
-        <div className="px-6 py-4 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-slate-700/80 flex items-center justify-between text-white sticky top-0 z-20">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-orange-600 flex items-center justify-center font-black text-lg shadow-sm">
+        <div className="px-4 sm:px-6 py-3.5 sm:py-4 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-slate-700/80 flex items-center justify-between text-white sticky top-0 z-20">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-orange-600 flex items-center justify-center font-black text-base sm:text-lg shadow-sm shrink-0">
               LT
             </div>
-            <div>
-              <h2 className="text-lg font-bold flex items-center gap-2">
-                <span>{isEditing ? 'Modifier le Bon de Bagages' : 'Nouveau Bon de Bagages'}</span>
-                <span className="font-mono text-orange-400 bg-orange-950/80 px-2 py-0.5 rounded text-sm border border-orange-800">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-sm sm:text-lg font-bold flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <span className="truncate">{isEditing ? 'Modifier Bon' : 'Nouveau Bon'}</span>
+                <span className="font-mono text-orange-400 bg-orange-950/80 px-1.5 py-0.5 rounded text-xs sm:text-sm border border-orange-800 shrink-0">
                   N° {trackingNumber || '0000000'}
                 </span>
               </h2>
-              <p className="text-xs text-slate-300">
-                Société Loyalis Trans • Bordereau d'expédition & Transport
+              <p className="text-[11px] sm:text-xs text-slate-300 truncate">
+                Société Loyalis Trans • Expédition & Transport
               </p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
+            className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Modal Body - Scrollable Form */}
-        <form onSubmit={e => handleFormSubmit(e)} className="p-6 overflow-y-auto space-y-6 flex-1 text-slate-800 dark:text-slate-100">
+        <form onSubmit={e => handleFormSubmit(e)} className="p-3.5 sm:p-6 overflow-y-auto overflow-x-hidden space-y-4 sm:space-y-6 flex-1 text-slate-800 dark:text-slate-100">
           
           {errorMsg && (
             <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-sm flex items-center gap-3 animate-shake">

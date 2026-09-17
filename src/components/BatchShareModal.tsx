@@ -222,34 +222,34 @@ export const BatchShareModal: React.FC<BatchShareModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 animate-fadeIn">
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-5 animate-fadeIn overflow-y-auto">
       <div 
-        className="w-full max-w-5xl max-h-[92vh] bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl flex flex-col overflow-hidden text-white"
+        className="w-full max-w-5xl max-h-[96vh] sm:max-h-[92vh] bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden text-white my-auto"
         onClick={(e) => e.stopPropagation()}
       >
         
         {/* Header */}
-        <div className="p-4 sm:p-6 border-b border-slate-800 flex items-center justify-between gap-4 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-orange-500/20 text-orange-400 border border-orange-500/30 flex items-center justify-center shrink-0">
-              <Share2 className="w-5 h-5" />
+        <div className="p-3.5 sm:p-6 border-b border-slate-800 flex items-center justify-between gap-3 shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-orange-500/20 text-orange-400 border border-orange-500/30 flex items-center justify-center shrink-0">
+              <Share2 className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div>
-              <h2 className="text-lg sm:text-xl font-black uppercase tracking-tight text-white flex items-center gap-2">
-                <span>Partager les Bons Digitaux</span>
-                <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-orange-500 text-white">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-base sm:text-xl font-black uppercase tracking-tight text-white flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <span className="truncate">Partager les Bons</span>
+                <span className="text-[10px] sm:text-xs font-black px-2 py-0.5 rounded-full bg-orange-500 text-white shrink-0">
                   {selectedVouchers.length} sélectionné(s)
                 </span>
               </h2>
-              <p className="text-xs text-slate-400">
-                Génération des images officielles digitales prêtes à être partagées par WhatsApp ou téléchargées
+              <p className="text-[11px] sm:text-xs text-slate-400 truncate">
+                Génération d'images officielles pour WhatsApp ou téléchargement
               </p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
+            className="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer shrink-0"
             aria-label="Fermer"
           >
             <X className="w-5 h-5" />
@@ -257,10 +257,10 @@ export const BatchShareModal: React.FC<BatchShareModalProps> = ({
         </div>
 
         {/* Action Bar (Top Controls) */}
-        <div className="p-4 bg-slate-950/70 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3 shrink-0">
+        <div className="p-3 sm:p-4 bg-slate-950/70 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2.5 shrink-0">
           
           {/* Target Phone for WhatsApp */}
-          <div className="flex items-center gap-2 flex-1 min-w-[240px] max-w-sm">
+          <div className="flex items-center gap-2 w-full sm:w-auto sm:flex-1 max-w-sm">
             <span className="text-xs font-bold text-slate-400 whitespace-nowrap hidden sm:inline">
               N° WhatsApp :
             </span>
@@ -274,7 +274,7 @@ export const BatchShareModal: React.FC<BatchShareModalProps> = ({
           </div>
 
           {/* Quick Action Buttons */}
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             
             {/* Direct Native Share (Mobile App / WhatsApp) */}
             <button

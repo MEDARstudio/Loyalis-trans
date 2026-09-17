@@ -187,22 +187,22 @@ export const PublicTrackingPortal: React.FC<PublicTrackingPortalProps> = ({
       {/* ========================================================================= */}
       {/* 2. MAIN SINGLE-PAGE PUBLIC SEARCH & RESULTS                               */}
       {/* ========================================================================= */}
-      <main className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-8">
+      <main className="flex-1 w-full max-w-4xl mx-auto px-3.5 sm:px-6 py-5 sm:py-10 space-y-6 sm:space-y-8 overflow-x-hidden">
         
         {/* Search Hero Box */}
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-2xl relative overflow-hidden text-center space-y-4">
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-10 shadow-2xl relative overflow-hidden text-center space-y-4">
           <div className="absolute -right-16 -top-16 w-56 h-56 bg-orange-500/10 rounded-full blur-3xl pointer-events-none" />
           
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/15 text-orange-400 border border-orange-500/30 text-xs font-black uppercase tracking-wider">
-            <Truck className="w-3.5 h-3.5" />
-            Suivi des Bagages en Temps Réel
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/15 text-orange-400 border border-orange-500/30 text-xs font-black uppercase tracking-wider max-w-full truncate">
+            <Truck className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">Suivi des Bagages en Temps Réel</span>
           </div>
 
-          <h1 className="text-2xl sm:text-4xl font-black uppercase tracking-tight text-white">
+          <h1 className="text-xl sm:text-4xl font-black uppercase tracking-tight text-white break-words">
             Suivez votre <span className="text-orange-500">Bon de Transport</span>
           </h1>
 
-          <p className="text-slate-400 text-xs sm:text-sm max-w-lg mx-auto font-medium">
+          <p className="text-slate-400 text-xs sm:text-sm max-w-lg mx-auto font-medium break-words">
             Entrez uniquement le numéro de votre bon d'expédition pour consulter l'acheminement, 
             les bagages enregistrés et les photos.
           </p>
@@ -213,18 +213,18 @@ export const PublicTrackingPortal: React.FC<PublicTrackingPortalProps> = ({
               e.preventDefault();
               handleSearch();
             }}
-            className="pt-2 max-w-xl mx-auto"
+            className="pt-2 max-w-xl mx-auto w-full"
           >
             <div className="flex flex-col sm:flex-row gap-2.5">
-              <div className="relative flex-1">
-                <Search className="w-5 h-5 text-slate-400 absolute left-4 top-3.5" />
+              <div className="relative flex-1 min-w-0">
+                <Search className="w-5 h-5 text-slate-400 absolute left-4 top-3.5 shrink-0" />
                 <input
                   id="public-tracking-input"
                   type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Numéro de votre bon (ex: 0000501 ou 501)..."
-                  className="w-full pl-12 pr-4 py-3.5 bg-slate-950 border-2 border-slate-700 focus:border-orange-500 rounded-2xl text-white font-mono text-base placeholder-slate-500 font-bold focus:outline-none transition-colors shadow-inner"
+                  className="w-full pl-12 pr-4 py-3.5 bg-slate-950 border-2 border-slate-700 focus:border-orange-500 rounded-2xl text-white font-mono text-sm sm:text-base placeholder-slate-500 font-bold focus:outline-none transition-colors shadow-inner"
                   autoFocus
                 />
               </div>
@@ -232,7 +232,7 @@ export const PublicTrackingPortal: React.FC<PublicTrackingPortalProps> = ({
               <button
                 id="btn-public-tracking-search"
                 type="submit"
-                className="px-6 py-3.5 bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white font-black text-xs uppercase tracking-wider rounded-2xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md shrink-0"
+                className="w-full sm:w-auto px-6 py-3.5 bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white font-black text-xs uppercase tracking-wider rounded-2xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md shrink-0"
               >
                 <Search className="w-4 h-4 stroke-[2.5]" />
                 <span>Rechercher</span>
@@ -245,27 +245,27 @@ export const PublicTrackingPortal: React.FC<PublicTrackingPortalProps> = ({
         {/* 3. SEARCH RESULTS                                                         */}
         {/* ========================================================================= */}
         {searchedVoucher ? (
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-8 space-y-7 shadow-xl animate-fadeIn">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-4 sm:p-8 space-y-6 sm:space-y-7 shadow-xl animate-fadeIn max-w-full overflow-hidden">
             
             {/* Header: Voucher Info + Status */}
-            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-5">
-              <div>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Bon de Transport N°</span>
-                  <span className="font-mono text-2xl sm:text-3xl font-black text-white">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                  <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-400">Bon N°</span>
+                  <span className="font-mono text-xl sm:text-3xl font-black text-white break-all">
                     {searchedVoucher.trackingNumber}
                   </span>
-                  <span className={`text-xs font-black px-3 py-1 rounded-full border ${getStatusBadge(searchedVoucher.status).bg} ${getStatusBadge(searchedVoucher.status).text} ${getStatusBadge(searchedVoucher.status).border}`}>
+                  <span className={`text-[10px] sm:text-xs font-black px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full border shrink-0 ${getStatusBadge(searchedVoucher.status).bg} ${getStatusBadge(searchedVoucher.status).text} ${getStatusBadge(searchedVoucher.status).border}`}>
                     {getStatusBadge(searchedVoucher.status).label}
                   </span>
                 </div>
-                <p className="text-xs text-slate-400 mt-1 flex items-center gap-2">
-                  <Calendar className="w-3.5 h-3.5 text-orange-400" />
+                <p className="text-xs text-slate-400 mt-1 flex items-center gap-1.5 flex-wrap">
+                  <Calendar className="w-3.5 h-3.5 text-orange-400 shrink-0" />
                   <span>Expédié le {formatDate(searchedVoucher.date)} {searchedVoucher.time ? `à ${searchedVoucher.time}` : ''}</span>
                 </p>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 shrink-0">
                 {onOpenPrint && (
                   <button
                     onClick={() => onOpenPrint(searchedVoucher)}
@@ -406,8 +406,8 @@ export const PublicTrackingPortal: React.FC<PublicTrackingPortalProps> = ({
                 </span>
               </div>
 
-              <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/60">
-                <table className="w-full text-left text-xs">
+              <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950/60 max-w-full">
+                <table className="w-full min-w-[420px] text-left text-xs">
                   <thead className="bg-slate-800/80 text-slate-400 text-[10px] uppercase font-black tracking-wider border-b border-slate-800">
                     <tr>
                       <th className="py-2.5 px-3">#</th>

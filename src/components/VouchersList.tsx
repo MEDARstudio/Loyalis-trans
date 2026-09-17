@@ -236,17 +236,17 @@ export const VouchersList: React.FC<VouchersListProps> = ({
 
         {/* Batch Operations Bar (shown when items are selected) */}
         {selectedIds.length > 0 && (
-          <div className="p-3 bg-orange-50 dark:bg-orange-950/40 border-2 border-orange-200 dark:border-orange-900 rounded-xl flex flex-wrap items-center justify-between gap-3 animate-fadeIn">
+          <div className="p-3 bg-orange-50 dark:bg-orange-950/40 border-2 border-orange-200 dark:border-orange-900 rounded-xl flex flex-wrap items-center justify-between gap-3 animate-fadeIn max-w-full overflow-hidden">
             <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-orange-900 dark:text-orange-200">
-              <span className="w-5 h-5 rounded-full bg-orange-600 text-white flex items-center justify-center text-[10px] font-black">
+              <span className="w-5 h-5 rounded-full bg-orange-600 text-white flex items-center justify-center text-[10px] font-black shrink-0">
                 {selectedIds.length}
               </span>
               <span>bon(s) sélectionné(s)</span>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 max-w-full">
               {/* Batch Change Status Buttons */}
-              <div className="flex items-center gap-1">
+              <div className="flex flex-wrap items-center gap-1">
                 <span className="text-[10px] uppercase tracking-wider text-slate-600 dark:text-slate-300 font-bold">Statut :</span>
                 {(['EN_ATTENTE', 'EN_TRANSIT', 'ARRIVE_AGENCE', 'LIVRE', 'ANNULE'] as VoucherStatus[]).map(st => (
                   <button
@@ -267,7 +267,7 @@ export const VouchersList: React.FC<VouchersListProps> = ({
                   className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-xs cursor-pointer"
                   title="Valider directement tous les bons sélectionnés sans avoir à ouvrir le bon réel"
                 >
-                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
                   <span>Valider Direct ({selectedIds.length})</span>
                 </button>
               )}
@@ -284,8 +284,8 @@ export const VouchersList: React.FC<VouchersListProps> = ({
                   className="px-2.5 py-1 rounded bg-orange-600 hover:bg-orange-700 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-xs cursor-pointer transition-colors"
                   title="Partager les bons digitaux sous forme d'images prêtes pour WhatsApp ou téléchargement"
                 >
-                  <Share2 className="w-3.5 h-3.5" />
-                  <span>Partager Bons Digitaux ({selectedIds.length})</span>
+                  <Share2 className="w-3.5 h-3.5 shrink-0" />
+                  <span>Partager Bons ({selectedIds.length})</span>
                 </button>
               )}
 
@@ -294,7 +294,7 @@ export const VouchersList: React.FC<VouchersListProps> = ({
                 onClick={onOpenExcelExport}
                 className="px-2.5 py-1 rounded bg-teal-600 hover:bg-teal-700 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-xs cursor-pointer"
               >
-                <FileSpreadsheet className="w-3.5 h-3.5" />
+                <FileSpreadsheet className="w-3.5 h-3.5 shrink-0" />
                 <span>Exporter ({selectedIds.length})</span>
               </button>
 
@@ -306,7 +306,7 @@ export const VouchersList: React.FC<VouchersListProps> = ({
                 }}
                 className="px-2.5 py-1 rounded bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-xs cursor-pointer"
               >
-                <Trash2 className="w-3.5 h-3.5" />
+                <Trash2 className="w-3.5 h-3.5 shrink-0" />
                 <span>Supprimer</span>
               </button>
 

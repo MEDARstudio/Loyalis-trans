@@ -130,13 +130,13 @@ export const VoucherDetailModal: React.FC<VoucherDetailModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-950/85 overflow-y-auto">
-      <div className="relative w-full max-w-4xl bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden my-auto max-h-[92vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-slate-950/85 overflow-y-auto">
+      <div className="relative w-full max-w-4xl bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden my-auto max-h-[96vh] sm:max-h-[92vh] flex flex-col">
         
         {/* Top Sticky Header */}
-        <div className="px-6 py-4 bg-slate-900 text-white border-b border-slate-800 flex items-center justify-between sticky top-0 z-20">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-slate-950 border border-slate-700 flex items-center justify-center p-0.5 shadow-sm overflow-hidden shrink-0">
+        <div className="px-4 sm:px-6 py-3.5 sm:py-4 bg-slate-900 text-white border-b border-slate-800 flex items-center justify-between sticky top-0 z-20">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-slate-950 border border-slate-700 flex items-center justify-center p-0.5 shadow-sm overflow-hidden shrink-0">
               <img 
                 src="/logo.png" 
                 alt="Logo" 
@@ -149,27 +149,27 @@ export const VoucherDetailModal: React.FC<VoucherDetailModalProps> = ({
                 }}
               />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-xl font-black uppercase tracking-tight">
-                  Bon de Bagages #{voucher.trackingNumber}
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <h2 className="text-base sm:text-xl font-black uppercase tracking-tight truncate">
+                  Bon #{voucher.trackingNumber}
                 </h2>
                 <button
                   type="button"
                   onClick={handleCopyTracking}
-                  className="p-1 rounded bg-white/10 hover:bg-white/20 text-slate-300 transition-colors"
+                  className="p-1 rounded bg-white/10 hover:bg-white/20 text-slate-300 transition-colors shrink-0"
                   title="Copier le N° de suivi"
                 >
                   {copiedTracking ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                 </button>
               </div>
-              <p className="text-xs text-slate-400 font-medium">
-                Enregistré le {formatDate(voucher.date)} {voucher.time && `à ${voucher.time}`} • Loyalis Trans
+              <p className="text-[11px] sm:text-xs text-slate-400 font-medium truncate">
+                {formatDate(voucher.date)} {voucher.time && `à ${voucher.time}`} • Loyalis Trans
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={onClose}
               className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
@@ -181,7 +181,7 @@ export const VoucherDetailModal: React.FC<VoucherDetailModalProps> = ({
         </div>
 
         {/* Action Bar (Top Shortcuts) */}
-        <div className="px-6 py-3 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
+        <div className="px-4 sm:px-6 py-2.5 sm:py-3 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2.5">
           
           {/* Status & Payment Badges */}
           <div className="flex flex-wrap items-center gap-2">
@@ -301,7 +301,7 @@ export const VoucherDetailModal: React.FC<VoucherDetailModalProps> = ({
         </div>
 
         {/* Scrollable Content Body */}
-        <div className="p-6 space-y-6 overflow-y-auto flex-1 text-slate-800 dark:text-slate-200">
+        <div className="p-3.5 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto overflow-x-hidden flex-1 text-slate-800 dark:text-slate-200">
           
           {/* Validation Status & Audit Card */}
           <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
