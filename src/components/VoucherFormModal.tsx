@@ -650,21 +650,16 @@ export const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
         
         {/* Modal Header */}
         <div className="px-4 sm:px-6 py-3.5 sm:py-4 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-slate-700/80 flex items-center justify-between text-white sticky top-0 z-20">
-          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-orange-600 flex items-center justify-center font-black text-base sm:text-lg shadow-sm shrink-0">
-              LT
-            </div>
-            <div className="min-w-0 flex-1">
-              <h2 className="text-sm sm:text-lg font-bold flex flex-wrap items-center gap-1.5 sm:gap-2">
-                <span className="truncate">{isEditing ? 'Modifier Bon' : 'Nouveau Bon'}</span>
-                <span className="font-mono text-orange-400 bg-orange-950/80 px-1.5 py-0.5 rounded text-xs sm:text-sm border border-orange-800 shrink-0">
-                  N° {trackingNumber || '0000000'}
-                </span>
-              </h2>
-              <p className="text-[11px] sm:text-xs text-slate-300 truncate">
-                Société Loyalis Trans • Expédition & Transport
-              </p>
-            </div>
+          <div className="min-w-0 flex-1">
+            <h2 className="text-sm sm:text-lg font-bold flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <span className="truncate">{isEditing ? 'Modifier Bon' : 'Nouveau Bon'}</span>
+              <span className="font-mono text-orange-400 bg-orange-950/80 px-1.5 py-0.5 rounded text-xs sm:text-sm border border-orange-800 shrink-0">
+                N° {trackingNumber || '0000000'}
+              </span>
+            </h2>
+            <p className="text-[11px] sm:text-xs text-slate-300 truncate mt-0.5">
+              Société Loyalis Trans • Expédition & Transport
+            </p>
           </div>
 
           <button

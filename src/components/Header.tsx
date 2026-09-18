@@ -163,30 +163,17 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Desktop Main Navigation Bar */}
         <div className="hidden md:flex max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 items-center justify-between gap-4">
           
-          {/* Brand Logo & Title */}
+          {/* Brand Name & Title */}
           <div 
-            id="header-brand-logo"
-            className="flex items-center gap-3 cursor-pointer select-none shrink-0" 
+            id="header-brand-title"
+            className="flex items-center cursor-pointer select-none shrink-0" 
             onClick={() => handleTabSelect('list')}
           >
-            <div className="relative w-10 h-10 rounded-xl overflow-hidden bg-slate-900 border border-slate-700/80 flex items-center justify-center p-0.5 shrink-0">
-              <img 
-                src="/logo.png" 
-                alt="Loyalis Trans Logo" 
-                className="w-full h-full object-contain"
-                onError={(e) => {
-                  (e.currentTarget as HTMLElement).style.display = 'none';
-                  if (e.currentTarget.parentElement) {
-                    e.currentTarget.parentElement.innerHTML = '<span class="font-black text-orange-500 text-base">LT</span>';
-                  }
-                }}
-              />
-            </div>
             <div className="min-w-0">
               <h1 className="text-xl lg:text-2xl font-black tracking-tight uppercase text-white leading-none truncate">
                 Loyalis <span className="text-orange-500">Trans</span>
               </h1>
-              <p className="text-[10px] font-semibold text-slate-400 mt-0.5 truncate">
+              <p className="text-[10px] font-semibold text-slate-400 mt-1 truncate">
                 Gestion des expéditions & fret
               </p>
             </div>
@@ -403,32 +390,18 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Top Row: Brand, Quick Status, + Nouveau Bon & Menu Trigger */}
           <div className="px-3.5 h-14 flex items-center justify-between gap-2 border-b border-slate-800/60">
             
-            {/* Brand Logo & Name */}
+            {/* Brand Name */}
             <div 
               id="mobile-header-brand"
-              className="flex items-center gap-2.5 cursor-pointer select-none min-w-0" 
+              className="flex items-center cursor-pointer select-none min-w-0" 
               onClick={() => handleTabSelect('list')}
             >
-              <div className="relative w-8 h-8 rounded-xl overflow-hidden bg-slate-950 border border-slate-700/80 flex items-center justify-center p-0.5 shrink-0 shadow-xs">
-                <img 
-                  src="/logo.png" 
-                  alt="Logo" 
-                  className="w-full h-full object-contain"
-                  onError={(e) => {
-                    (e.currentTarget as HTMLElement).style.display = 'none';
-                    if (e.currentTarget.parentElement) {
-                      e.currentTarget.parentElement.innerHTML = '<span class="font-black text-orange-500 text-xs">LT</span>';
-                    }
-                  }}
-                />
-              </div>
-              
               <div className="min-w-0">
                 <div className="text-sm font-black uppercase text-white tracking-tight leading-tight flex items-center gap-1.5">
                   <span>Loyalis <span className="text-orange-500">Trans</span></span>
                 </div>
                 {/* Live connection indicator */}
-                <div className="flex items-center gap-1 text-[10px] font-semibold text-slate-400">
+                <div className="flex items-center gap-1 text-[10px] font-semibold text-slate-400 mt-0.5">
                   {syncStatus === 'synced' ? (
                     <>
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -588,26 +561,11 @@ export const Header: React.FC<HeaderProps> = ({
             
             {/* Drawer Header */}
             <div className="p-4 border-b border-slate-800 bg-slate-950 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="relative w-8 h-8 rounded-xl overflow-hidden bg-slate-900 border border-slate-700 flex items-center justify-center p-0.5 shrink-0">
-                  <img 
-                    src="/logo.png" 
-                    alt="Logo" 
-                    className="w-full h-full object-contain"
-                    onError={(e) => {
-                      (e.currentTarget as HTMLElement).style.display = 'none';
-                      if (e.currentTarget.parentElement) {
-                        e.currentTarget.parentElement.innerHTML = '<span class="font-black text-orange-500 text-xs">LT</span>';
-                      }
-                    }}
-                  />
-                </div>
-                <div>
-                  <h2 className="text-sm font-black uppercase text-white tracking-wide leading-tight">
-                    Loyalis <span className="text-orange-500">Trans</span>
-                  </h2>
-                  <p className="text-[11px] text-slate-400">Menu & Profil</p>
-                </div>
+              <div>
+                <h2 className="text-sm font-black uppercase text-white tracking-wide leading-tight">
+                  Loyalis <span className="text-orange-500">Trans</span>
+                </h2>
+                <p className="text-[11px] text-slate-400 mt-0.5">Menu & Profil</p>
               </div>
 
               <button

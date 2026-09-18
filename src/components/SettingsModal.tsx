@@ -537,7 +537,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     type="text"
                     value={formData.trackingPrefix || ''}
                     onChange={e => setFormData({ ...formData, trackingPrefix: e.target.value.toUpperCase() })}
-                    placeholder="ex: LT-"
+                    placeholder="ex: BON-"
                     className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm uppercase focus:ring-2 focus:ring-orange-500"
                   />
                 </div>

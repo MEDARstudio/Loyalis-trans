@@ -135,38 +135,23 @@ export const VoucherDetailModal: React.FC<VoucherDetailModalProps> = ({
         
         {/* Top Sticky Header */}
         <div className="px-4 sm:px-6 py-3.5 sm:py-4 bg-slate-900 text-white border-b border-slate-800 flex items-center justify-between sticky top-0 z-20">
-          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-slate-950 border border-slate-700 flex items-center justify-center p-0.5 shadow-sm overflow-hidden shrink-0">
-              <img 
-                src="/logo.png" 
-                alt="Logo" 
-                className="w-full h-full object-contain"
-                onError={(e) => {
-                  (e.currentTarget as HTMLElement).style.display = 'none';
-                  if (e.currentTarget.parentElement) {
-                    e.currentTarget.parentElement.innerHTML = '<span class="font-black text-orange-500 text-sm">LT</span>';
-                  }
-                }}
-              />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <h2 className="text-base sm:text-xl font-black uppercase tracking-tight truncate">
+                Bon #{voucher.trackingNumber}
+              </h2>
+              <button
+                type="button"
+                onClick={handleCopyTracking}
+                className="p-1 rounded bg-white/10 hover:bg-white/20 text-slate-300 transition-colors shrink-0"
+                title="Copier le N° de suivi"
+              >
+                {copiedTracking ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+              </button>
             </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <h2 className="text-base sm:text-xl font-black uppercase tracking-tight truncate">
-                  Bon #{voucher.trackingNumber}
-                </h2>
-                <button
-                  type="button"
-                  onClick={handleCopyTracking}
-                  className="p-1 rounded bg-white/10 hover:bg-white/20 text-slate-300 transition-colors shrink-0"
-                  title="Copier le N° de suivi"
-                >
-                  {copiedTracking ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                </button>
-              </div>
-              <p className="text-[11px] sm:text-xs text-slate-400 font-medium truncate">
-                {formatDate(voucher.date)} {voucher.time && `à ${voucher.time}`} • Loyalis Trans
-              </p>
-            </div>
+            <p className="text-[11px] sm:text-xs text-slate-400 font-medium truncate mt-0.5">
+              {formatDate(voucher.date)} {voucher.time && `à ${voucher.time}`} • Loyalis Trans
+            </p>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">

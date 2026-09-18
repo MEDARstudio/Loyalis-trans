@@ -39,9 +39,6 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
     if (this.state.hasError) {
       return (
         <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-orange-500/20 text-orange-400 border border-orange-500/40 flex items-center justify-center text-2xl font-black mb-4">
-            LT
-          </div>
           <h1 className="text-2xl font-black uppercase text-white mb-2 tracking-tight">
             Loyalis <span className="text-orange-500">Trans</span>
           </h1>

@@ -141,34 +141,19 @@ export const PublicTrackingPortal: React.FC<PublicTrackingPortalProps> = ({
         
         {/* Brand */}
         <div 
-          className="flex items-center gap-2.5 cursor-pointer select-none"
+          className="cursor-pointer select-none"
           onClick={() => {
             setSearchedVoucher(null);
             setHasSearched(false);
             setQuery('');
           }}
         >
-          <div className="w-9 h-9 rounded-xl bg-slate-950 border border-slate-700 p-0.5 flex items-center justify-center overflow-hidden shadow-xs">
-            <img 
-              src="/logo.png" 
-              alt="Loyalis Trans" 
-              className="w-full h-full object-contain"
-              onError={(e) => {
-                (e.currentTarget as HTMLElement).style.display = 'none';
-                if (e.currentTarget.parentElement) {
-                  e.currentTarget.parentElement.innerHTML = '<span class="font-black text-orange-500 text-sm">LT</span>';
-                }
-              }}
-            />
-          </div>
-          <div>
-            <span className="text-base font-black uppercase tracking-tight text-white flex items-center gap-1 leading-none">
-              Loyalis <span className="text-orange-500">Trans</span>
-            </span>
-            <span className="text-[10px] text-slate-400 font-medium tracking-wide block mt-0.5">
-              Portail Public de Suivi des Bagages
-            </span>
-          </div>
+          <span className="text-base font-black uppercase tracking-tight text-white flex items-center gap-1 leading-none">
+            Loyalis <span className="text-orange-500">Trans</span>
+          </span>
+          <span className="text-[10px] text-slate-400 font-medium tracking-wide block mt-1">
+            Portail Public de Suivi des Bagages
+          </span>
         </div>
 
         {/* Right action: Discrete Agent / Admin Login */}
@@ -223,7 +208,7 @@ export const PublicTrackingPortal: React.FC<PublicTrackingPortalProps> = ({
                   type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Numéro de votre bon (ex: 0000501 ou 501)..."
+                  placeholder="Numéro de votre bon (ex: 00000)..."
                   className="w-full pl-12 pr-4 py-3.5 bg-slate-950 border-2 border-slate-700 focus:border-orange-500 rounded-2xl text-white font-mono text-sm sm:text-base placeholder-slate-500 font-bold focus:outline-none transition-colors shadow-inner"
                   autoFocus
                 />
@@ -583,7 +568,7 @@ export const PublicTrackingPortal: React.FC<PublicTrackingPortalProps> = ({
             </div>
             <h3 className="text-lg font-bold text-white">Aucun bon de transport trouvé</h3>
             <p className="text-xs text-slate-400 max-w-sm mx-auto">
-              Vérifiez le numéro de bon saisi (ex: <strong className="text-orange-400 font-mono">0000501</strong> ou <strong className="text-orange-400 font-mono">501</strong>). 
+              Vérifiez le numéro de bon saisi sur votre ticket ou reçu (ex: <strong className="text-orange-400 font-mono">00000</strong>). 
               Si votre bon vient d'être émis, il sera consultable d'ici quelques instants.
             </p>
           </div>

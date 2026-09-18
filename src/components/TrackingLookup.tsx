@@ -119,7 +119,7 @@ export const TrackingLookup: React.FC<TrackingLookupProps> = ({
                   type="text"
                   value={query}
                   onChange={e => setQuery(e.target.value)}
-                  placeholder="Numéro de suivi (ex: 0000001)..."
+                  placeholder="Numéro de votre bon (ex: 00000)..."
                   className="w-full pl-12 pr-4 py-3.5 bg-slate-950 border-2 border-slate-700 rounded-2xl text-white font-mono text-base placeholder-slate-500 focus:outline-none focus:border-orange-500 font-bold tracking-wider"
                 />
               </div>

@@ -126,21 +126,16 @@ export const VoucherPrintView: React.FC<VoucherPrintViewProps> = ({
         <div className="px-4 sm:px-6 py-3.5 bg-slate-900 text-white flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 print:hidden sticky top-0 z-30">
           
           {/* Left Title & Branding */}
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-orange-600 flex items-center justify-center font-black text-base text-white shadow-sm">
-              LT
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-black text-sm sm:text-base">Téléchargement & Impression</span>
+              <span className="font-mono bg-orange-500/20 text-orange-400 px-2.5 py-0.5 rounded-lg text-xs font-black border border-orange-500/40">
+                N° {voucher.trackingNumber}
+              </span>
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-black text-sm sm:text-base">Téléchargement & Impression</span>
-                <span className="font-mono bg-orange-500/20 text-orange-400 px-2.5 py-0.5 rounded-lg text-xs font-black border border-orange-500/40">
-                  N° {voucher.trackingNumber}
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-400">
-                Génération directe : Image PNG HD réalignée ou PDF Vectoriel officiel
-              </p>
-            </div>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              Génération directe : Image PNG HD réalignée ou PDF Vectoriel officiel
+            </p>
           </div>
 
           {/* Right Toolbar Controls */}
@@ -274,28 +269,13 @@ export const VoucherPrintView: React.FC<VoucherPrintViewProps> = ({
                   {/* Header */}
                   <div className="flex flex-wrap items-start justify-between gap-3 border-b-2 border-slate-200 pb-3">
                     <div className="space-y-1 max-w-xs">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-11 h-11 rounded-xl bg-slate-900 border border-slate-700 flex items-center justify-center p-0.5 shadow-sm shrink-0 overflow-hidden">
-                          <img 
-                            src="/logo.png" 
-                            alt="Logo" 
-                            className="w-full h-full object-contain" 
-                            onError={(e) => {
-                              (e.currentTarget as HTMLElement).style.display = 'none';
-                              if (e.currentTarget.parentElement) {
-                                e.currentTarget.parentElement.innerHTML = '<span class="font-black text-orange-500 text-sm">LT</span>';
-                              }
-                            }}
-                          />
-                        </div>
-                        <div>
-                          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-950 leading-none uppercase">
-                            {settings.companyName || 'LOYALIS TRANS'}
-                          </h1>
-                          <p className="text-[10px] font-bold text-orange-600 uppercase tracking-wider mt-0.5">
-                            Transport Express Bagages & Colis
-                          </p>
-                        </div>
+                      <div>
+                        <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-950 leading-none uppercase">
+                          {settings.companyName || 'LOYALIS TRANS'}
+                        </h1>
+                        <p className="text-[10px] font-bold text-orange-600 uppercase tracking-wider mt-0.5">
+                          Transport Express Bagages & Colis
+                        </p>
                       </div>
                       
                       <div className="text-[10.5px] text-slate-600 space-y-0.5 pt-0.5">
@@ -504,29 +484,14 @@ export const VoucherPrintView: React.FC<VoucherPrintViewProps> = ({
                   </div>
 
                   <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-lg bg-slate-900 border border-slate-700 flex items-center justify-center p-0.5 shadow-xs overflow-hidden shrink-0">
-                        <img 
-                          src="/logo.png" 
-                          alt="Logo" 
-                          className="w-full h-full object-contain" 
-                          onError={(e) => {
-                            (e.currentTarget as HTMLElement).style.display = 'none';
-                            if (e.currentTarget.parentElement) {
-                              e.currentTarget.parentElement.innerHTML = '<span class="font-black text-orange-500 text-[10px]">LT</span>';
-                            }
-                          }}
-                        />
-                      </div>
-                      <div>
-                        <span className="font-black text-sm text-slate-900 uppercase">LOYALIS TRANS</span>
-                        <span className="text-xs text-slate-600 ml-2 font-bold">
-                          Bon N° <strong className="font-mono text-orange-600">{voucher.trackingNumber}</strong>
-                        </span>
-                        <p className="text-[10px] text-orange-600 font-bold uppercase">
-                          {voucher.departureCity || 'Casablanca'} ➔ {voucher.recipient.destination}
-                        </p>
-                      </div>
+                    <div>
+                      <span className="font-black text-sm text-slate-900 uppercase">LOYALIS TRANS</span>
+                      <span className="text-xs text-slate-600 ml-2 font-bold">
+                        Bon N° <strong className="font-mono text-orange-600">{voucher.trackingNumber}</strong>
+                      </span>
+                      <p className="text-[10px] text-orange-600 font-bold uppercase">
+                        {voucher.departureCity || 'Casablanca'} ➔ {voucher.recipient.destination}
+                      </p>
                     </div>
 
                     <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 p-1 rounded-xl mr-24 sm:mr-28">
@@ -593,28 +558,13 @@ export const VoucherPrintView: React.FC<VoucherPrintViewProps> = ({
               <div className="border-2 border-slate-900 rounded-3xl p-5 sm:p-7 space-y-5 bg-white">
                 <div className="flex flex-wrap items-start justify-between gap-4 border-b-2 border-slate-900 pb-4">
                   <div className="space-y-1.5 max-w-sm">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-2xl bg-slate-900 border border-slate-700 flex items-center justify-center p-1 shadow-sm overflow-hidden shrink-0">
-                        <img 
-                          src="/logo.png" 
-                          alt="Logo" 
-                          className="w-full h-full object-contain" 
-                          onError={(e) => {
-                            (e.currentTarget as HTMLElement).style.display = 'none';
-                            if (e.currentTarget.parentElement) {
-                              e.currentTarget.parentElement.innerHTML = '<span class="font-black text-orange-500 text-lg">LT</span>';
-                            }
-                          }}
-                        />
-                      </div>
-                      <div>
-                        <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950 leading-none uppercase">
-                          {settings.companyName || 'LOYALIS TRANS'}
-                        </h1>
-                        <p className="text-xs font-black text-orange-600 uppercase tracking-widest mt-1">
-                          Bordereau & Facture de Transport Bagages
-                        </p>
-                      </div>
+                    <div>
+                      <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950 leading-none uppercase">
+                        {settings.companyName || 'LOYALIS TRANS'}
+                      </h1>
+                      <p className="text-xs font-black text-orange-600 uppercase tracking-widest mt-1">
+                        Bordereau & Facture de Transport Bagages
+                      </p>
                     </div>
                     <p className="text-xs text-slate-600 pt-1">
                       Service Client : <strong>{settings.phone1}</strong> {settings.phone2 ? `• ${settings.phone2}` : ''} | {settings.address}

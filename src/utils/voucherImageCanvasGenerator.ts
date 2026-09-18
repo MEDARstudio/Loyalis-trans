@@ -36,23 +36,6 @@ export async function generateVoucherCanvas(
     console.warn('QR Code generation skipped in canvas:', err);
   }
 
-  // Load Brand Logo Image
-  let logoImage: HTMLImageElement | null = null;
-  try {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.src = '/logo.png';
-    await new Promise<void>((resolve) => {
-      img.onload = () => {
-        logoImage = img;
-        resolve();
-      };
-      img.onerror = () => resolve();
-    });
-  } catch (err) {
-    console.warn('Logo image loading skipped:', err);
-  }
-
   // Dimensions (High Definition Canvas: 1000px width)
   const width = 1000;
   const padding = 36;
@@ -100,50 +83,24 @@ export async function generateVoucherCanvas(
   ctx.fillStyle = '#ea580c';
   ctx.fillRect(padding, curY + headerHeight - 6, contentWidth, 6);
 
-  // ── Brand Logo Badge (Orange/Dark Square with Image or LT) ──
-  const logoSize = 64;
-  const logoX = padding + 24;
-  const logoY = curY + 24;
-
-  if (logoImage) {
-    ctx.save();
-    ctx.fillStyle = '#020617';
-    roundRect(ctx, logoX, logoY, logoSize, logoSize, 14);
-    ctx.fill();
-    ctx.strokeStyle = '#334155';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-    ctx.clip();
-    // draw image scaled cleanly
-    ctx.drawImage(logoImage, logoX + 2, logoY + 2, logoSize - 4, logoSize - 4);
-    ctx.restore();
-  } else {
-    ctx.fillStyle = '#ea580c';
-    roundRect(ctx, logoX, logoY, logoSize, logoSize, 14);
-    ctx.fill();
-
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '900 28px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('LT', logoX + logoSize / 2, logoY + logoSize / 2 + 1);
-  }
-
   // ── Brand Name & Tagline ──
+  const brandX = padding + 28;
+  const brandY = curY + 28;
+
   ctx.textAlign = 'left';
   ctx.fillStyle = '#ffffff';
-  ctx.font = '900 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.font = '900 26px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
   const companyName = (settings.companyName || 'LOYALIS TRANS').toUpperCase();
-  ctx.fillText(companyName, logoX + logoSize + 16, logoY + 18);
+  ctx.fillText(companyName, brandX, brandY + 14);
 
   ctx.fillStyle = '#fb923c'; // Orange-400
   ctx.font = '700 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-  ctx.fillText('TRANSPORT EXPRESS BAGAGES & COLIS', logoX + logoSize + 16, logoY + 40);
+  ctx.fillText('TRANSPORT EXPRESS BAGAGES & COLIS', brandX, brandY + 38);
 
   ctx.fillStyle = '#94a3b8'; // Slate-400
   ctx.font = '500 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
   const phoneContact = `Tél : ${settings.phone1 || '+212 600-000000'}${settings.phone2 ? `  •  ${settings.phone2}` : ''}`;
-  ctx.fillText(phoneContact, logoX + logoSize + 16, logoY + 60);
+  ctx.fillText(phoneContact, brandX, brandY + 60);
 
   // ── Tracking Badge (Right Side) ──
   const trackBoxW = 260;

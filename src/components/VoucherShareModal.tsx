@@ -745,33 +745,18 @@ export const VoucherShareModal: React.FC<VoucherShareModalProps> = ({
                     {/* Header */}
                     <div className="bg-slate-950 text-white px-4 sm:px-5 py-3 border-b-2 border-orange-500 relative overflow-hidden">
                       <div className="flex items-center justify-between gap-3 relative z-10">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-700 flex items-center justify-center p-0.5 shadow-sm shrink-0 overflow-hidden">
-                            <img 
-                              src="/logo.png" 
-                              alt="Logo" 
-                              className="w-full h-full object-contain" 
-                              onError={(e) => {
-                                (e.currentTarget as HTMLElement).style.display = 'none';
-                                if (e.currentTarget.parentElement) {
-                                  e.currentTarget.parentElement.innerHTML = '<span class="font-black text-orange-500 text-sm">LT</span>';
-                                }
-                              }}
-                            />
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-base sm:text-lg font-black tracking-tight text-white uppercase leading-none">
+                              {settings.companyName || 'LOYALIS TRANS'}
+                            </h3>
+                            <span className="px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400 border border-orange-500/40 text-[9px] font-black uppercase tracking-wider">
+                              Express
+                            </span>
                           </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <h3 className="text-base sm:text-lg font-black tracking-tight text-white uppercase leading-none">
-                                {settings.companyName || 'LOYALIS TRANS'}
-                              </h3>
-                              <span className="px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400 border border-orange-500/40 text-[9px] font-black uppercase tracking-wider">
-                                Express
-                              </span>
-                            </div>
-                            <p className="text-[10px] font-semibold text-slate-400 mt-0.5">
-                              Tél : {settings.phone1 || '+212 600-000000'} {settings.phone2 ? `• ${settings.phone2}` : ''}
-                            </p>
-                          </div>
+                          <p className="text-[10px] font-semibold text-slate-400 mt-0.5">
+                            Tél : {settings.phone1 || '+212 600-000000'} {settings.phone2 ? `• ${settings.phone2}` : ''}
+                          </p>
                         </div>
 
                         <div className="text-right flex items-center gap-2">

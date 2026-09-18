@@ -302,28 +302,13 @@ export const MonthlyStatementPDFModal: React.FC<MonthlyStatementPDFModalProps> =
             <div className="flex flex-wrap items-start justify-between gap-4 border-b-2 border-slate-900 pb-5">
               
               <div className="space-y-1 max-w-md">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-slate-950 border border-slate-700 flex items-center justify-center p-1 shadow-sm overflow-hidden shrink-0">
-                    <img 
-                      src="/logo.png" 
-                      alt="Logo" 
-                      className="w-full h-full object-contain" 
-                      onError={(e) => {
-                        (e.currentTarget as HTMLElement).style.display = 'none';
-                        if (e.currentTarget.parentElement) {
-                          e.currentTarget.parentElement.innerHTML = '<span class="font-black text-orange-500 text-lg">LT</span>';
-                        }
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950 leading-none uppercase">
-                      {settings.companyName || 'LOYALIS TRANS'}
-                    </h1>
-                    <p className="text-xs font-bold text-orange-600 uppercase tracking-widest mt-0.5">
-                      {settings.tagline || 'Transport Express de Bagages, Colis & Fret'}
-                    </p>
-                  </div>
+                <div>
+                  <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950 leading-none uppercase">
+                    {settings.companyName || 'LOYALIS TRANS'}
+                  </h1>
+                  <p className="text-xs font-bold text-orange-600 uppercase tracking-widest mt-1">
+                    {settings.tagline || 'Transport Express de Bagages, Colis & Fret'}
+                  </p>
                 </div>
                 
                 <div className="text-xs text-slate-600 space-y-0.5 pt-1">

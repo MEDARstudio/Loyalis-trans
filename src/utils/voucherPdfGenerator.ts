@@ -187,24 +187,16 @@ function renderSingleStub(
   doc.text(stubTitle, x + w - 37.5, y + 3.8, { align: 'center' });
 
   // ── Header Left: Brand & Contacts ──
-  // Logo LT square
-  doc.setFillColor(234, 88, 12); // #ea580c
-  doc.roundedRect(x + 3, y + 3, 9, 9, 2, 2, 'F');
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
-  doc.setTextColor(255, 255, 255);
-  doc.text('LT', x + 7.5, y + 9.2, { align: 'center' });
-
   // Company Name
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
   doc.setTextColor(15, 23, 42); // slate-900
-  doc.text((settings.companyName || 'LOYALIS TRANS').toUpperCase(), x + 14, y + 7.5);
+  doc.text((settings.companyName || 'LOYALIS TRANS').toUpperCase(), x + 3, y + 7.5);
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(6.5);
   doc.setTextColor(234, 88, 12);
-  doc.text('TRANSPORT EXPRESS BAGAGES & COLIS', x + 14, y + 10.8);
+  doc.text('TRANSPORT EXPRESS BAGAGES & COLIS', x + 3, y + 10.8);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(6.5);
@@ -480,24 +472,16 @@ function renderFullPageLayout(
   doc.setFillColor(15, 23, 42);
   doc.rect(0, 0, pageWidth, 28, 'F');
 
-  // Logo Badge
-  doc.setFillColor(234, 88, 12);
-  doc.roundedRect(margin, 5, 16, 16, 3, 3, 'F');
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.setTextColor(255, 255, 255);
-  doc.text('LT', margin + 8, 15.5, { align: 'center' });
-
   // Company Name
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(16);
   doc.setTextColor(255, 255, 255);
-  doc.text((settings.companyName || 'LOYALIS TRANS').toUpperCase(), margin + 20, 12);
+  doc.text((settings.companyName || 'LOYALIS TRANS').toUpperCase(), margin, 12);
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
   doc.setTextColor(251, 146, 60);
-  doc.text('BORDEREAU OFFICIEL DE TRANSPORT & FACTURE BAGAGES', margin + 20, 18);
+  doc.text('BORDEREAU OFFICIEL DE TRANSPORT & FACTURE BAGAGES', margin, 18);
 
   // Tracking Number Right
   doc.setFont('helvetica', 'bold');
