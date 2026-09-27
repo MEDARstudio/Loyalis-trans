@@ -161,8 +161,8 @@ export function getPaymentStatusInfo(
     case 'NON_PAYE':
       return {
         type: 'NON_PAYE',
-        label: 'Non payé (À la livraison)',
-        shortLabel: 'Non payé',
+        label: 'À la livraison (Non payé)',
+        shortLabel: 'À livraison',
         badgeBg: 'bg-rose-50 dark:bg-rose-950/50',
         badgeText: 'text-rose-700 dark:text-rose-300',
         badgeBorder: 'border-rose-200 dark:border-rose-800',

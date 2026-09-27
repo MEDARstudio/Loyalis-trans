@@ -141,25 +141,19 @@ export const PublicTrackingPortal: React.FC<PublicTrackingPortalProps> = ({
         
         {/* Brand */}
         <div 
-          className="cursor-pointer select-none flex items-center gap-2.5"
+          className="cursor-pointer select-none"
           onClick={() => {
             setSearchedVoucher(null);
             setHasSearched(false);
             setQuery('');
           }}
         >
-          {/* Carré orange avec LT blanc */}
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 text-white font-black text-sm flex items-center justify-center shadow-xs tracking-tighter shrink-0 select-none">
-            LT
-          </div>
-          <div>
-            <span className="text-base font-black uppercase tracking-tight text-white flex items-center gap-1 leading-none">
-              Loyalis <span className="text-orange-500">Trans</span>
-            </span>
-            <span className="text-[10px] text-slate-400 font-medium tracking-wide block mt-1">
-              Portail Public de Suivi des Bagages
-            </span>
-          </div>
+          <span className="text-base font-black uppercase tracking-tight text-white flex items-center gap-1 leading-none">
+            Loyalis <span className="text-orange-500">Trans</span>
+          </span>
+          <span className="text-[10px] text-slate-400 font-medium tracking-wide block mt-1">
+            Portail Public de Suivi des Bagages
+          </span>
         </div>
 
         {/* Right action: Discrete Agent / Admin Login */}

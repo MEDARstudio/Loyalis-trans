@@ -81,6 +81,8 @@ export const VoucherDetailModal: React.FC<VoucherDetailModalProps> = ({
   const [showPaymentQuickMenu, setShowPaymentQuickMenu] = useState<boolean>(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState<boolean>(false);
   const [restrictionMsg, setRestrictionMsg] = useState<string | null>(null);
+  const [isAdvanceInputOpen, setIsAdvanceInputOpen] = useState<boolean>(false);
+  const [advanceInputVal, setAdvanceInputVal] = useState<string>('');
 
   // Photo viewer state
   const [isPhotoViewerOpen, setIsPhotoViewerOpen] = useState<boolean>(false);
@@ -643,27 +645,100 @@ export const VoucherDetailModal: React.FC<VoucherDetailModalProps> = ({
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs text-slate-500 font-semibold shrink-0">Changer statut paiement :</span>
                 <button
-                  onClick={() => onUpdatePayment(voucher.id, 'PAYE', voucher.totalPrice)}
-                  className={`px-2.5 py-1 text-xs font-bold rounded-lg border transition-all ${
+                  onClick={() => {
+                    setIsAdvanceInputOpen(false);
+                    onUpdatePayment(voucher.id, 'PAYE', voucher.totalPrice);
+                  }}
+                  className={`px-3 py-1.5 text-xs font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer shadow-xs active:scale-95 flex items-center gap-1 ${
                     paymentInfo.type === 'PAYE'
-                      ? 'bg-emerald-600 text-white border-emerald-600'
-                      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 hover:bg-emerald-50'
+                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 hover:bg-emerald-50 hover:border-emerald-400'
                   }`}
                 >
-                  Payé (100%)
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>✓ Payé (100%)</span>
                 </button>
                 <button
-                  onClick={() => onUpdatePayment(voucher.id, 'NON_PAYE', 0)}
-                  className={`px-2.5 py-1 text-xs font-bold rounded-lg border transition-all ${
+                  onClick={() => {
+                    setIsAdvanceInputOpen(false);
+                    onUpdatePayment(voucher.id, 'NON_PAYE', 0);
+                  }}
+                  className={`px-3 py-1.5 text-xs font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer shadow-xs active:scale-95 flex items-center gap-1 ${
                     paymentInfo.type === 'NON_PAYE'
-                      ? 'bg-rose-600 text-white border-rose-600'
-                      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 hover:bg-rose-50'
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 hover:bg-blue-50 hover:border-blue-400'
                   }`}
                 >
-                  Non payé (0%)
+                  <Truck className="w-3.5 h-3.5" />
+                  <span>🚚 À la livraison</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setAdvanceInputVal(voucher.advanceAmount ? String(voucher.advanceAmount) : '');
+                    setIsAdvanceInputOpen(!isAdvanceInputOpen);
+                  }}
+                  className={`px-3 py-1.5 text-xs font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer shadow-xs active:scale-95 ${
+                    paymentInfo.type === 'AVANCE' || isAdvanceInputOpen
+                      ? 'bg-amber-500 text-slate-950 border-amber-600 font-black shadow-sm'
+                      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 hover:bg-amber-50 hover:border-amber-400'
+                  }`}
+                >
+                  ⏳ Avance...
                 </button>
               </div>
             </div>
+
+            {/* Inline Advance Input Form */}
+            {isAdvanceInputOpen && (
+              <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 rounded-xl flex flex-wrap items-center gap-2 animate-fadeIn text-xs">
+                <span className="font-bold text-amber-900 dark:text-amber-200">
+                  Montant de l'avance reçue ({currency}) :
+                </span>
+                <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+                  <input
+                    type="number"
+                    min="0"
+                    max={voucher.totalPrice}
+                    step="any"
+                    value={advanceInputVal}
+                    onChange={e => setAdvanceInputVal(e.target.value)}
+                    placeholder={`Ex: 50 (max ${voucher.totalPrice})`}
+                    className="w-36 px-2.5 py-1 bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700 rounded-lg text-xs font-mono font-bold focus:outline-none"
+                    autoFocus
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        const parsed = parseFloat(advanceInputVal);
+                        if (!isNaN(parsed) && parsed > 0) {
+                          onUpdatePayment(voucher.id, 'AVANCE', parsed);
+                          setIsAdvanceInputOpen(false);
+                        }
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    disabled={!advanceInputVal || parseFloat(advanceInputVal) <= 0}
+                    onClick={() => {
+                      const parsed = parseFloat(advanceInputVal);
+                      if (!isNaN(parsed) && parsed > 0) {
+                        onUpdatePayment(voucher.id, 'AVANCE', parsed);
+                        setIsAdvanceInputOpen(false);
+                      }
+                    }}
+                    className="px-3 py-1 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-lg disabled:opacity-50 cursor-pointer shadow-xs"
+                  >
+                    Valider l'Avance
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsAdvanceInputOpen(false)}
+                    className="px-2.5 py-1 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold rounded-lg cursor-pointer"
+                  >
+                    Annuler
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Financial 3-box Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

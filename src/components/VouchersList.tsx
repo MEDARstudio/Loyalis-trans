@@ -73,6 +73,7 @@ interface VouchersListProps {
   onOpenValidation?: (voucher: Voucher) => void;
   onDirectValidate?: (voucherId: string) => void;
   onBatchValidate?: (voucherIds: string[]) => void;
+  onUpdatePayment?: (id: string, paymentStatus: 'PAYE' | 'NON_PAYE' | 'AVANCE', advanceAmount?: number) => void;
 }
 
 export const VouchersList: React.FC<VouchersListProps> = ({
@@ -105,7 +106,8 @@ export const VouchersList: React.FC<VouchersListProps> = ({
   currentAgent,
   onOpenValidation,
   onDirectValidate,
-  onBatchValidate
+  onBatchValidate,
+  onUpdatePayment
 }) => {
   const currency = settings.currency || 'DH';
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
@@ -113,6 +115,7 @@ export const VouchersList: React.FC<VouchersListProps> = ({
   const [selectedPhotoVoucher, setSelectedPhotoVoucher] = useState<Voucher | null>(null);
   const [advanceModalOpen, setAdvanceModalOpen] = useState<boolean>(false);
   const [advanceAmountInput, setAdvanceAmountInput] = useState<string>('');
+  const [advanceTargetVoucher, setAdvanceTargetVoucher] = useState<Voucher | null>(null);
   const [restrictionToast, setRestrictionToast] = useState<string | null>(null);
 
   // Toggle selection
@@ -268,18 +271,73 @@ export const VouchersList: React.FC<VouchersListProps> = ({
 
         {/* Batch Operations Bar (shown when items are selected) */}
         {selectedIds.length > 0 && (
-          <div className="p-3 bg-orange-50 dark:bg-orange-950/40 border-2 border-orange-200 dark:border-orange-900 rounded-xl flex flex-wrap items-center justify-between gap-3 animate-fadeIn max-w-full overflow-hidden">
+          <div className="p-3 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/40 dark:to-slate-900 border-2 border-orange-300 dark:border-orange-800 rounded-2xl flex flex-wrap items-center justify-between gap-3 animate-fadeIn max-w-full shadow-sm">
             <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-orange-900 dark:text-orange-200">
-              <span className="w-5 h-5 rounded-full bg-orange-600 text-white flex items-center justify-center text-[10px] font-black shrink-0">
+              <span className="w-6 h-6 rounded-full bg-orange-600 text-white flex items-center justify-center text-xs font-black shrink-0 shadow-xs">
                 {selectedIds.length}
               </span>
               <span>bon(s) sélectionné(s)</span>
             </div>
 
             <div className="flex flex-wrap items-center gap-2 max-w-full">
+              {/* Priorité : Options rapides de Statut de Paiement (Payé ou À la livraison) */}
+              {(onBatchUpdatePaymentStatus || onUpdatePayment) && (
+                <div className="flex flex-wrap items-center gap-1.5 p-1 bg-white dark:bg-slate-800 rounded-xl border border-orange-200 dark:border-orange-800/80 shadow-xs">
+                  <span className="text-[10px] uppercase tracking-wider text-slate-700 dark:text-slate-200 font-black flex items-center gap-1 px-1">
+                    <Coins className="w-3.5 h-3.5 text-orange-600" />
+                    Paiement :
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onBatchUpdatePaymentStatus) {
+                        onBatchUpdatePaymentStatus(selectedIds, 'PAYE');
+                      } else if (onUpdatePayment) {
+                        selectedIds.forEach(id => {
+                          const v = vouchers.find(x => x.id === id);
+                          onUpdatePayment(id, 'PAYE', v?.totalPrice || 0);
+                        });
+                      }
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer shadow-xs flex items-center gap-1 active:scale-95"
+                    title="Marquer comme PAYÉ (100% au départ)"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>✓ Payé</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onBatchUpdatePaymentStatus) {
+                        onBatchUpdatePaymentStatus(selectedIds, 'NON_PAYE');
+                      } else if (onUpdatePayment) {
+                        selectedIds.forEach(id => onUpdatePayment(id, 'NON_PAYE', 0));
+                      }
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer shadow-xs flex items-center gap-1 active:scale-95"
+                    title="Marquer comme À LA LIVRAISON (payable par le destinataire)"
+                  >
+                    <Truck className="w-3.5 h-3.5" />
+                    <span>🚚 À la livraison</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAdvanceTargetVoucher(null);
+                      setAdvanceAmountInput('');
+                      setAdvanceModalOpen(true);
+                    }}
+                    className="px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-[11px] uppercase tracking-wider transition-all cursor-pointer shadow-xs active:scale-95"
+                    title="Définir une avance reçue sur les bons sélectionnés"
+                  >
+                    ⏳ Avance...
+                  </button>
+                </div>
+              )}
+
               {/* Batch Change Status Buttons */}
-              <div className="flex flex-wrap items-center gap-1">
-                <span className="text-[10px] uppercase tracking-wider text-slate-600 dark:text-slate-300 font-bold">Statut :</span>
+              <div className="flex flex-wrap items-center gap-1 pl-1">
+                <span className="text-[10px] uppercase tracking-wider text-slate-600 dark:text-slate-300 font-bold">Acheminement :</span>
                 {(['EN_ATTENTE', 'EN_TRANSIT', 'ARRIVE_AGENCE', 'LIVRE', 'ANNULE'] as VoucherStatus[]).map(st => (
                   <button
                     key={st}
@@ -290,43 +348,6 @@ export const VouchersList: React.FC<VouchersListProps> = ({
                   </button>
                 ))}
               </div>
-
-              {/* Batch Change Payment Status Buttons */}
-              {onBatchUpdatePaymentStatus && (
-                <div className="flex flex-wrap items-center gap-1 pl-2 border-l border-orange-300 dark:border-orange-800">
-                  <span className="text-[10px] uppercase tracking-wider text-slate-600 dark:text-slate-300 font-bold flex items-center gap-1">
-                    <Coins className="w-3 h-3 text-orange-600" />
-                    Paiement :
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => onBatchUpdatePaymentStatus(selectedIds, 'PAYE')}
-                    className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-wider transition-colors cursor-pointer shadow-2xs"
-                    title="Marquer tous les bons sélectionnés comme PAYÉS (100%)"
-                  >
-                    ✓ Payé (100%)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onBatchUpdatePaymentStatus(selectedIds, 'NON_PAYE')}
-                    className="px-2.5 py-1 rounded bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-black uppercase tracking-wider transition-colors cursor-pointer shadow-2xs"
-                    title="Marquer tous les bons sélectionnés comme NON PAYÉS"
-                  >
-                    ✗ Non Payé
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAdvanceAmountInput('');
-                      setAdvanceModalOpen(true);
-                    }}
-                    className="px-2.5 py-1 rounded bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-[10px] uppercase tracking-wider transition-colors cursor-pointer shadow-2xs"
-                    title="Définir une avance reçue sur les bons sélectionnés"
-                  >
-                    ⏳ Avance...
-                  </button>
-                </div>
-              )}
 
               {/* Batch Direct Validate (Amine) */}
               {currentAgent?.name === 'Amine' && onBatchValidate && (
@@ -633,15 +654,46 @@ export const VouchersList: React.FC<VouchersListProps> = ({
                       </span>
                     </div>
 
-                    <div className="text-right">
+                    <div className="text-right" onClick={e => e.stopPropagation()}>
                       <div className="font-black text-xs sm:text-sm text-slate-900 dark:text-white">
                         {formatCurrency(v.totalPrice, currency)}
                       </div>
-                      <span className={`inline-block px-1.5 py-0.2 rounded text-[8px] sm:text-[9px] font-black uppercase tracking-wider ${paymentInfo.badgeBg} ${paymentInfo.badgeText}`}>
-                        {paymentInfo.type === 'PAYE' && 'Payé'}
-                        {paymentInfo.type === 'NON_PAYE' && 'Non payé'}
-                        {paymentInfo.type === 'AVANCE' && `Avance ${paymentInfo.advance} DH`}
-                      </span>
+                      <select
+                        value={paymentInfo.type}
+                        onChange={(e) => {
+                          const val = e.target.value as 'PAYE' | 'NON_PAYE' | 'AVANCE';
+                          if (val === 'AVANCE') {
+                            setAdvanceTargetVoucher(v);
+                            setAdvanceAmountInput(v.advanceAmount ? String(v.advanceAmount) : '');
+                            setAdvanceModalOpen(true);
+                          } else {
+                            if (selectedIds.includes(v.id) && selectedIds.length > 1 && onBatchUpdatePaymentStatus) {
+                              onBatchUpdatePaymentStatus(selectedIds, val);
+                            } else if (onUpdatePayment) {
+                              onUpdatePayment(v.id, val, val === 'PAYE' ? v.totalPrice : 0);
+                            } else if (onBatchUpdatePaymentStatus) {
+                              onBatchUpdatePaymentStatus([v.id], val);
+                            }
+                          }
+                        }}
+                        className={`mt-0.5 text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md border cursor-pointer ${
+                          paymentInfo.type === 'PAYE'
+                            ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-300'
+                            : paymentInfo.type === 'AVANCE'
+                            ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-300'
+                            : 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-300'
+                        }`}
+                        title="Changer statut de paiement"
+                      >
+                        <option value="PAYE" className="bg-white dark:bg-slate-900 text-emerald-700 font-bold">✓ Payé</option>
+                        <option value="NON_PAYE" className="bg-white dark:bg-slate-900 text-blue-700 font-bold">🚚 À la livraison</option>
+                        <option value="AVANCE" className="bg-white dark:bg-slate-900 text-amber-700 font-bold">⏳ Avance...</option>
+                      </select>
+                      {paymentInfo.type === 'AVANCE' && paymentInfo.remaining > 0 && (
+                        <span className="text-[9px] font-bold text-rose-600 dark:text-rose-400 block font-mono">
+                          Reste: {paymentInfo.remaining} {currency}
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -926,20 +978,50 @@ export const VouchersList: React.FC<VouchersListProps> = ({
                         </div>
                       </td>
 
-                      {/* Price & Payment Status */}
-                      <td className="py-4 px-3 text-right" onClick={() => onOpenDetail(v)}>
-                        <div className="font-black text-base text-slate-900 dark:text-white tracking-tight">
+                      {/* Price & Payment Status Interactive Control */}
+                      <td className="py-4 px-3 text-right" onClick={e => e.stopPropagation()}>
+                        <div 
+                          className="font-black text-base text-slate-900 dark:text-white tracking-tight cursor-pointer hover:text-orange-600 transition-colors"
+                          onClick={() => onOpenDetail(v)}
+                          title="Cliquez pour voir les détails financiers du bon"
+                        >
                           {formatCurrency(v.totalPrice, currency)}
                         </div>
-                        <div className="mt-0.5 flex justify-end">
-                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider border ${paymentInfo.badgeBg} ${paymentInfo.badgeText} ${paymentInfo.badgeBorder}`}>
-                            {paymentInfo.type === 'PAYE' && 'Payé'}
-                            {paymentInfo.type === 'NON_PAYE' && 'Non payé'}
-                            {paymentInfo.type === 'AVANCE' && `Avance (${paymentInfo.advance} DH)`}
-                          </span>
+                        <div className="mt-1 flex items-center justify-end">
+                          <select
+                            value={paymentInfo.type}
+                            onChange={(e) => {
+                              const val = e.target.value as 'PAYE' | 'NON_PAYE' | 'AVANCE';
+                              if (val === 'AVANCE') {
+                                setAdvanceTargetVoucher(v);
+                                setAdvanceAmountInput(v.advanceAmount ? String(v.advanceAmount) : '');
+                                setAdvanceModalOpen(true);
+                              } else {
+                                if (selectedIds.includes(v.id) && selectedIds.length > 1 && onBatchUpdatePaymentStatus) {
+                                  onBatchUpdatePaymentStatus(selectedIds, val);
+                                } else if (onUpdatePayment) {
+                                  onUpdatePayment(v.id, val, val === 'PAYE' ? v.totalPrice : 0);
+                                } else if (onBatchUpdatePaymentStatus) {
+                                  onBatchUpdatePaymentStatus([v.id], val);
+                                }
+                              }
+                            }}
+                            className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-lg border transition-all cursor-pointer shadow-2xs ${
+                              paymentInfo.type === 'PAYE'
+                                ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700 hover:bg-emerald-100'
+                                : paymentInfo.type === 'AVANCE'
+                                ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700 hover:bg-amber-100'
+                                : 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700 hover:bg-blue-100'
+                            }`}
+                            title="Modifier le statut : Payé ou À la livraison"
+                          >
+                            <option value="PAYE" className="bg-white dark:bg-slate-900 text-emerald-700 font-bold">✓ Payé (100%)</option>
+                            <option value="NON_PAYE" className="bg-white dark:bg-slate-900 text-blue-700 font-bold">🚚 À la livraison</option>
+                            <option value="AVANCE" className="bg-white dark:bg-slate-900 text-amber-700 font-bold">⏳ Avance...</option>
+                          </select>
                         </div>
                         {paymentInfo.type === 'AVANCE' && paymentInfo.remaining > 0 && (
-                          <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 block mt-0.5">
+                          <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 block mt-0.5 font-mono">
                             Reste : {formatCurrency(paymentInfo.remaining, currency)}
                           </span>
                         )}
@@ -1165,16 +1247,19 @@ export const VouchersList: React.FC<VouchersListProps> = ({
                 </div>
                 <div>
                   <h3 className="text-sm font-black uppercase text-slate-900 dark:text-white">
-                    Avance de Paiement Groupée
+                    {advanceTargetVoucher ? `Avance Bon #${advanceTargetVoucher.trackingNumber}` : 'Avance de Paiement Groupée'}
                   </h3>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    Pour les {selectedIds.length} bon(s) sélectionnés
+                    {advanceTargetVoucher ? `Montant total du bon : ${advanceTargetVoucher.totalPrice} ${currency}` : `Pour les ${selectedIds.length} bon(s) sélectionnés`}
                   </p>
                 </div>
               </div>
               <button
                 type="button"
-                onClick={() => setAdvanceModalOpen(false)}
+                onClick={() => {
+                  setAdvanceModalOpen(false);
+                  setAdvanceTargetVoucher(null);
+                }}
                 className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white"
               >
                 <X className="w-5 h-5" />
@@ -1198,9 +1283,14 @@ export const VouchersList: React.FC<VouchersListProps> = ({
                   onKeyDown={e => {
                     if (e.key === 'Enter') {
                       const parsed = parseFloat(advanceAmountInput);
-                      if (!isNaN(parsed) && parsed > 0 && onBatchUpdatePaymentStatus) {
-                        onBatchUpdatePaymentStatus(selectedIds, 'AVANCE', parsed);
+                      if (!isNaN(parsed) && parsed > 0) {
+                        if (advanceTargetVoucher && onUpdatePayment) {
+                          onUpdatePayment(advanceTargetVoucher.id, 'AVANCE', parsed);
+                        } else if (onBatchUpdatePaymentStatus) {
+                          onBatchUpdatePaymentStatus(selectedIds, 'AVANCE', parsed);
+                        }
                         setAdvanceModalOpen(false);
+                        setAdvanceTargetVoucher(null);
                       }
                     }
                   }}
@@ -1210,14 +1300,17 @@ export const VouchersList: React.FC<VouchersListProps> = ({
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Le reste à payer sera calculé automatiquement pour chaque bon sélectionné.
+                Le reste à payer sera calculé automatiquement ({advanceTargetVoucher ? `${Math.max(0, (advanceTargetVoucher.totalPrice || 0) - (parseFloat(advanceAmountInput) || 0))} ${currency} à la livraison` : 'déduit du montant total'}).
               </p>
             </div>
 
             <div className="flex items-center justify-end gap-2 pt-2">
               <button
                 type="button"
-                onClick={() => setAdvanceModalOpen(false)}
+                onClick={() => {
+                  setAdvanceModalOpen(false);
+                  setAdvanceTargetVoucher(null);
+                }}
                 className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
               >
                 Annuler
@@ -1227,9 +1320,14 @@ export const VouchersList: React.FC<VouchersListProps> = ({
                 disabled={!advanceAmountInput || parseFloat(advanceAmountInput) <= 0}
                 onClick={() => {
                   const parsed = parseFloat(advanceAmountInput);
-                  if (!isNaN(parsed) && parsed > 0 && onBatchUpdatePaymentStatus) {
-                    onBatchUpdatePaymentStatus(selectedIds, 'AVANCE', parsed);
+                  if (!isNaN(parsed) && parsed > 0) {
+                    if (advanceTargetVoucher && onUpdatePayment) {
+                      onUpdatePayment(advanceTargetVoucher.id, 'AVANCE', parsed);
+                    } else if (onBatchUpdatePaymentStatus) {
+                      onBatchUpdatePaymentStatus(selectedIds, 'AVANCE', parsed);
+                    }
                     setAdvanceModalOpen(false);
+                    setAdvanceTargetVoucher(null);
                   }
                 }}
                 className="px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-black uppercase tracking-wider shadow-sm cursor-pointer"
