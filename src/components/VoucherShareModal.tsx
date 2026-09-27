@@ -200,7 +200,8 @@ export const VoucherShareModal: React.FC<VoucherShareModalProps> = ({
         setExportFeedback('Image PNG HD du bon téléchargée !');
         setTimeout(() => setExportFeedback(null), 3000);
       } else {
-        alert("Impossible de générer l'image. Veuillez télécharger le PDF.");
+        setExportFeedback("Impossible de générer l'image. Veuillez télécharger le PDF.");
+        setTimeout(() => setExportFeedback(null), 4000);
       }
     } finally {
       setIsExportingImage(false);
@@ -248,7 +249,8 @@ export const VoucherShareModal: React.FC<VoucherShareModalProps> = ({
         setExportFeedback('PDF vectoriel officiel généré et téléchargé !');
         setTimeout(() => setExportFeedback(null), 3000);
       } else {
-        alert("Erreur lors de la génération du PDF.");
+        setExportFeedback("Erreur lors de la génération du PDF.");
+        setTimeout(() => setExportFeedback(null), 4000);
       }
     } finally {
       setIsExportingPdf(false);

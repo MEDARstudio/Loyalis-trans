@@ -50,6 +50,22 @@ export interface VoucherPhoto {
   caption?: string; // Note ou description du cas/bon
 }
 
+export interface VoucherModificationHistory {
+  id: string;
+  timestamp: string; // ISO date-time e.g. "2026-09-27T14:15:00.000Z"
+  dateFormatted?: string; // e.g. "27/09/2026 à 14:15"
+  authorName: string; // e.g. 'Amine' | 'Sofiane' | 'Système'
+  actionType: 'CREATION' | 'MODIFICATION' | 'STATUS_CHANGE' | 'PAYMENT_CHANGE' | 'VALIDATION' | 'EXTERNAL_CARRIER';
+  title: string; // Short summary
+  motif?: string; // Raison / motif de la modification
+  changes?: {
+    field: string;
+    oldValue?: string | number | boolean;
+    newValue?: string | number | boolean;
+  }[];
+  notes?: string;
+}
+
 export interface LuggageItem {
   id: string;
   nature: string;
@@ -83,7 +99,9 @@ export interface Voucher {
     destination: string; // City / Agency / Address
     phone: string;
     address?: string;
+    isStudent?: boolean; // Option Étudiant (Destinataire Étudiant)
   };
+  isStudent?: boolean; // Raccourci statut étudiant du bon
 
   // Baggage / Colis details
   departureCity: string;
@@ -128,6 +146,9 @@ export interface Voucher {
   externalCost?: number; // Montant payé/dû au transporteur tiers (DH)
   externalPaymentStatus?: ExternalPaymentStatus; // 'PAID' (Payé/Réglé) | 'UNPAID' (À régler / En attente)
   externalNotes?: string; // Notes particulières sur la sous-traitance / lieu de transfert
+
+  // Historique complet des modifications & motifs
+  history?: VoucherModificationHistory[];
 }
 
 export interface FinancialSummary {

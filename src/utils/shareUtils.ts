@@ -85,7 +85,11 @@ export function shareViaWhatsApp(
     ? `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encoded}`
     : `https://api.whatsapp.com/send?text=${encoded}`;
 
-  window.open(url, '_blank');
+  try {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  } catch (err) {
+    console.warn('Failed to open window:', err);
+  }
 }
 
 /**

@@ -307,7 +307,9 @@ export const HistoryStatementsView: React.FC<HistoryStatementsViewProps> = ({
     const msg = encodeURIComponent(
       `Bonjour ${voucher.recipient?.name || voucher.sender?.name}, rappel amical de Loyalis Trans concernant l'envoi N° ${voucher.trackingNumber} (${voucher.totalColis} colis). Le reliquat à régler est de ${formatCurrency(remaining, currency)}. Merci de votre confiance.`
     );
-    window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
+    try {
+      window.open(`https://wa.me/${phone}?text=${msg}`, '_blank', 'noopener,noreferrer');
+    } catch {}
   };
 
   // Direct print trigger for printable statement
@@ -453,94 +455,94 @@ export const HistoryStatementsView: React.FC<HistoryStatementsViewProps> = ({
       {/* Primary Financial Metric Cards (Executive Dashboard) */}
       <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {/* Card 1: Chiffre d'affaires Brut */}
-        <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden">
+        <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden min-w-0">
           <div className="flex items-center justify-between text-slate-400 mb-1">
-            <span className="text-[10px] font-black uppercase tracking-wider">CA Brut Client</span>
-            <DollarSign className="w-4 h-4 text-orange-500" />
+            <span className="text-[10px] font-black uppercase tracking-wider truncate">CA Brut Client</span>
+            <DollarSign className="w-4 h-4 text-orange-500 shrink-0" />
           </div>
-          <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+          <div className="text-lg sm:text-xl lg:text-2xl font-black text-slate-900 dark:text-white tracking-tight truncate font-mono" title={formatCurrency(stats.totalTurnover, currency)}>
             {formatCurrency(stats.totalTurnover, currency)}
           </div>
-          <p className="text-[10px] font-bold text-slate-400 mt-1">
+          <p className="text-[10px] font-bold text-slate-400 mt-1 truncate">
             {stats.totalVouchers} bons • {stats.totalColis} colis
           </p>
         </div>
 
         {/* Card 2: Encaissé Réel */}
-        <div className="p-4 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 shadow-sm">
+        <div className="p-4 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 shadow-sm min-w-0">
           <div className="flex items-center justify-between text-emerald-700 dark:text-emerald-300 mb-1">
-            <span className="text-[10px] font-black uppercase tracking-wider">Encaissé Réel</span>
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <span className="text-[10px] font-black uppercase tracking-wider truncate">Encaissé Réel</span>
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
           </div>
-          <div className="text-xl sm:text-2xl font-black text-emerald-800 dark:text-emerald-200 tracking-tight">
+          <div className="text-lg sm:text-xl lg:text-2xl font-black text-emerald-800 dark:text-emerald-200 tracking-tight truncate font-mono" title={formatCurrency(stats.totalCollected, currency)}>
             {formatCurrency(stats.totalCollected, currency)}
           </div>
-          <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-1">
+          <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-1 truncate">
             {stats.collectionRate}% perçu au départ
           </p>
         </div>
 
         {/* Card 3: Créances Clients / Reste à Encaisser */}
-        <div className={`p-4 rounded-2xl border shadow-sm ${
+        <div className={`p-4 rounded-2xl border shadow-sm min-w-0 ${
           stats.totalReceivables > 0 
             ? 'bg-rose-50/70 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800' 
             : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
         }`}>
           <div className="flex items-center justify-between text-rose-700 dark:text-rose-300 mb-1">
-            <span className="text-[10px] font-black uppercase tracking-wider">Créances à l'arrivée</span>
-            <Clock className="w-4 h-4 text-rose-600" />
+            <span className="text-[10px] font-black uppercase tracking-wider truncate">Créances arrivée</span>
+            <Clock className="w-4 h-4 text-rose-600 shrink-0" />
           </div>
-          <div className="text-xl sm:text-2xl font-black text-rose-700 dark:text-rose-300 tracking-tight">
+          <div className="text-lg sm:text-xl lg:text-2xl font-black text-rose-700 dark:text-rose-300 tracking-tight truncate font-mono" title={formatCurrency(stats.totalReceivables, currency)}>
             {formatCurrency(stats.totalReceivables, currency)}
           </div>
-          <p className="text-[10px] font-bold text-rose-600 dark:text-rose-400 mt-1">
-            À percevoir des destinataires
+          <p className="text-[10px] font-bold text-rose-600 dark:text-rose-400 mt-1 truncate">
+            À percevoir
           </p>
         </div>
 
         {/* Card 4: Dépenses Sous-Traitance (Transporteurs Externes) */}
-        <div className="p-4 rounded-2xl bg-amber-50/70 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 shadow-sm">
+        <div className="p-4 rounded-2xl bg-amber-50/70 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 shadow-sm min-w-0">
           <div className="flex items-center justify-between text-amber-700 dark:text-amber-300 mb-1">
-            <span className="text-[10px] font-black uppercase tracking-wider">Coût Sous-Traitance</span>
-            <Truck className="w-4 h-4 text-amber-600" />
+            <span className="text-[10px] font-black uppercase tracking-wider truncate">Sous-Traitance</span>
+            <Truck className="w-4 h-4 text-amber-600 shrink-0" />
           </div>
-          <div className="text-xl sm:text-2xl font-black text-amber-800 dark:text-amber-200 tracking-tight">
+          <div className="text-lg sm:text-xl lg:text-2xl font-black text-amber-800 dark:text-amber-200 tracking-tight truncate font-mono" title={formatCurrency(stats.totalExternalCost, currency)}>
             {formatCurrency(stats.totalExternalCost, currency)}
           </div>
-          <p className="text-[10px] font-bold text-amber-600 dark:text-amber-400 mt-1">
-            {stats.externalVouchersCount} bons sous-traités
+          <p className="text-[10px] font-bold text-amber-600 dark:text-amber-400 mt-1 truncate">
+            {stats.externalVouchersCount} sous-traités
           </p>
         </div>
 
         {/* Card 5: Dettes Transporteurs Externes */}
-        <div className={`p-4 rounded-2xl border shadow-sm ${
+        <div className={`p-4 rounded-2xl border shadow-sm min-w-0 ${
           stats.externalCostUnpaid > 0 
             ? 'bg-rose-50/70 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800 animate-pulse' 
             : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
         }`}>
           <div className="flex items-center justify-between text-rose-700 dark:text-rose-300 mb-1">
-            <span className="text-[10px] font-black uppercase tracking-wider">Dettes Transporteurs</span>
-            <AlertTriangle className="w-4 h-4 text-rose-600" />
+            <span className="text-[10px] font-black uppercase tracking-wider truncate">Dettes Transp.</span>
+            <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
           </div>
-          <div className="text-xl sm:text-2xl font-black text-rose-700 dark:text-rose-300 tracking-tight">
+          <div className="text-lg sm:text-xl lg:text-2xl font-black text-rose-700 dark:text-rose-300 tracking-tight truncate font-mono" title={formatCurrency(stats.externalCostUnpaid, currency)}>
             {formatCurrency(stats.externalCostUnpaid, currency)}
           </div>
-          <p className="text-[10px] font-bold text-rose-600 dark:text-rose-400 mt-1">
-            À régler aux transporteurs
+          <p className="text-[10px] font-bold text-rose-600 dark:text-rose-400 mt-1 truncate">
+            À régler
           </p>
         </div>
 
         {/* Card 6: Bénéfice Net Dégagé */}
-        <div className="p-4 rounded-2xl bg-slate-900 text-white border border-slate-800 shadow-md relative overflow-hidden">
+        <div className="p-4 rounded-2xl bg-slate-900 text-white border border-slate-800 shadow-md relative overflow-hidden min-w-0">
           <div className="flex items-center justify-between text-slate-300 mb-1">
-            <span className="text-[10px] font-black uppercase tracking-wider">Marge / Bénéfice Net</span>
-            <TrendingUp className="w-4 h-4 text-orange-400" />
+            <span className="text-[10px] font-black uppercase tracking-wider truncate">Marge Nette</span>
+            <TrendingUp className="w-4 h-4 text-orange-400 shrink-0" />
           </div>
-          <div className="text-xl sm:text-2xl font-black text-white tracking-tight">
+          <div className="text-lg sm:text-xl lg:text-2xl font-black text-white tracking-tight truncate font-mono" title={formatCurrency(stats.netMargin, currency)}>
             {formatCurrency(stats.netMargin, currency)}
           </div>
-          <p className="text-[10px] font-bold text-orange-400 mt-1">
-            Taux de marge : {stats.profitRate}%
+          <p className="text-[10px] font-bold text-orange-400 mt-1 truncate">
+            Marge : {stats.profitRate}%
           </p>
         </div>
       </div>
@@ -704,13 +706,13 @@ export const HistoryStatementsView: React.FC<HistoryStatementsViewProps> = ({
                               #{v.trackingNumber}
                             </span>
                           </td>
-                          <td className="py-3 px-3">
-                            <strong className="text-slate-900 dark:text-white font-bold block">{v.sender.name}</strong>
-                            <span className="text-[10px] text-slate-400 font-mono">{v.sender.phone}</span>
+                          <td className="py-3 px-3 min-w-0">
+                            <strong className="text-slate-900 dark:text-white font-bold block truncate max-w-[140px] sm:max-w-[180px]" title={v.sender.name}>{v.sender.name}</strong>
+                            <span className="text-[10px] text-slate-400 font-mono block truncate">{v.sender.phone}</span>
                           </td>
-                          <td className="py-3 px-3">
-                            <strong className="text-slate-900 dark:text-white font-bold block">{v.recipient.name}</strong>
-                            <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400">
+                          <td className="py-3 px-3 min-w-0">
+                            <strong className="text-slate-900 dark:text-white font-bold block truncate max-w-[140px] sm:max-w-[180px]" title={v.recipient.name}>{v.recipient.name}</strong>
+                            <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400 block truncate">
                               {v.departureCity || 'Casablanca'} ➔ {v.recipient.destination || v.destinationCity}
                             </span>
                           </td>

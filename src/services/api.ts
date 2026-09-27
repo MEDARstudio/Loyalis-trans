@@ -850,6 +850,142 @@ export const api = {
     return { success: true, count: Math.max(count, cleanIds.length) };
   },
 
+  // --- BATCH UPDATE PAYMENT STATUS ---
+  async batchUpdatePaymentStatus(
+    ids: string[], 
+    paymentStatus: string, 
+    advanceAmount?: number, 
+    authorName?: string
+  ): Promise<{ success: boolean; count: number }> {
+    const cleanIds = ids.map(id => String(id || '').trim());
+
+    try {
+      const res = await fetch('/api/vouchers/batch/payment-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: cleanIds, paymentStatus, advanceAmount, authorName })
+      });
+      const contentType = res.headers.get('content-type');
+      if (res.ok && contentType && contentType.includes('application/json')) {
+        const data = await res.json();
+        // Also update local cache
+        const local = getLocalVouchers();
+        const now = new Date();
+        const nowIso = now.toISOString();
+        const dateFormatted = now.toLocaleDateString('fr-FR') + ' à ' + now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+        const updatedLocal = local.map(v => {
+          const vDigits = String(v.trackingNumber || '').replace(/\D/g, '');
+          const isMatch = cleanIds.some(id => {
+            if (id === v.id || id === v.trackingNumber || id === String(v.sequenceNumber)) return true;
+            const idDigits = id.replace(/\D/g, '');
+            return idDigits.length > 0 && idDigits === vDigits;
+          });
+          if (isMatch) {
+            let finalAdvance = 0;
+            if (paymentStatus === 'AVANCE') {
+              finalAdvance = advanceAmount !== undefined && advanceAmount > 0 ? advanceAmount : (v.advanceAmount || 0);
+            } else if (paymentStatus === 'PAYE') {
+              finalAdvance = v.totalPrice;
+            }
+            const finalRemaining = paymentStatus === 'PAYE' ? 0 : paymentStatus === 'NON_PAYE' ? v.totalPrice : Math.max(0, Math.round((v.totalPrice - finalAdvance) * 100) / 100);
+
+            const histEntry = {
+              id: `hist-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+              timestamp: nowIso,
+              dateFormatted,
+              authorName: authorName || 'Agent',
+              actionType: 'PAYMENT_CHANGE' as const,
+              title: `Règlement groupé : ${paymentStatus}`,
+              motif: 'Mise à jour groupée du statut de paiement',
+              changes: [{
+                field: 'Statut de paiement',
+                oldValue: v.paymentStatus,
+                newValue: paymentStatus
+              }]
+            };
+
+            const item = {
+              ...v,
+              paymentStatus: paymentStatus as any,
+              advanceAmount: finalAdvance,
+              remainingAmount: finalRemaining,
+              paymentMethod: paymentStatus as any,
+              history: [histEntry, ...(v.history || [])],
+              updatedAt: nowIso
+            };
+            supabaseApi.insertOrUpdateVoucher(item).catch(() => {});
+            return item;
+          }
+          return v;
+        });
+        saveLocalVouchers(updatedLocal);
+        return data;
+      }
+    } catch {
+      // Backend not running
+    }
+
+    let vouchers = getLocalVouchers();
+    let count = 0;
+    const now = new Date();
+    const nowIso = now.toISOString();
+    const dateFormatted = now.toLocaleDateString('fr-FR') + ' à ' + now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+    const isMatched = (v: Voucher) => {
+      const vDigits = String(v.trackingNumber || '').replace(/\D/g, '');
+      return cleanIds.some(id => {
+        if (id === v.id || id === v.trackingNumber || id === String(v.sequenceNumber)) return true;
+        const idDigits = id.replace(/\D/g, '');
+        return idDigits.length > 0 && idDigits === vDigits;
+      });
+    };
+
+    let updated = vouchers.map(v => {
+      if (isMatched(v)) {
+        count++;
+        let finalAdvance = 0;
+        if (paymentStatus === 'AVANCE') {
+          finalAdvance = advanceAmount !== undefined && advanceAmount > 0 ? advanceAmount : (v.advanceAmount || 0);
+        } else if (paymentStatus === 'PAYE') {
+          finalAdvance = v.totalPrice;
+        }
+        const finalRemaining = paymentStatus === 'PAYE' ? 0 : paymentStatus === 'NON_PAYE' ? v.totalPrice : Math.max(0, Math.round((v.totalPrice - finalAdvance) * 100) / 100);
+
+        const histEntry = {
+          id: `hist-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+          timestamp: nowIso,
+          dateFormatted,
+          authorName: authorName || 'Agent',
+          actionType: 'PAYMENT_CHANGE' as const,
+          title: `Règlement groupé : ${paymentStatus}`,
+          motif: 'Mise à jour groupée du statut de paiement',
+          changes: [{
+            field: 'Statut de paiement',
+            oldValue: v.paymentStatus,
+            newValue: paymentStatus
+          }]
+        };
+
+        const item = {
+          ...v,
+          paymentStatus: paymentStatus as any,
+          advanceAmount: finalAdvance,
+          remainingAmount: finalRemaining,
+          paymentMethod: paymentStatus as any,
+          history: [histEntry, ...(v.history || [])],
+          updatedAt: nowIso
+        };
+        supabaseApi.insertOrUpdateVoucher(item).catch(() => {});
+        return item;
+      }
+      return v;
+    });
+
+    saveLocalVouchers(updated);
+    return { success: true, count: Math.max(count, cleanIds.length) };
+  },
+
   // --- BATCH DELETE ---
   async batchDelete(ids: string[]): Promise<{ success: boolean; count: number }> {
     try {

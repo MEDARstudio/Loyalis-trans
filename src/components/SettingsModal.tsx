@@ -79,6 +79,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState<boolean>(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Profiles Management State (Amine Admin)
   const [agentsList, setAgentsList] = useState<AgentProfile[]>([]);
@@ -285,6 +286,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
+    setSaveError(null);
     try {
       saveStoredSupabaseConfig(supabaseConfig);
       await onSaveSettings(formData);
@@ -293,9 +295,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         setSavedSuccess(false);
         onClose();
       }, 1200);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error saving settings:', err);
-      alert('Erreur lors de la sauvegarde des paramètres');
+      setSaveError(err?.message || 'Erreur lors de la sauvegarde des paramètres');
     } finally {
       setIsSaving(false);
     }
@@ -1345,7 +1347,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         </form>
 
         {/* Footer */}
-        <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between sticky bottom-0 z-20">
+        <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-3 sticky bottom-0 z-20">
           <button
             type="button"
             onClick={onClose}
@@ -1353,6 +1355,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           >
             Annuler
           </button>
+
+          {saveError && (
+            <p className="text-xs text-rose-500 font-semibold">{saveError}</p>
+          )}
 
           <button
             type="button"

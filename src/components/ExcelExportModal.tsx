@@ -9,7 +9,9 @@ import {
   Calendar, 
   MapPin, 
   Check,
-  Layers
+  Layers,
+  GraduationCap,
+  AlertCircle
 } from 'lucide-react';
 import { CompanySettings, Voucher } from '../types';
 import { exportVouchersToExcel } from '../utils/excelExporter';
@@ -35,12 +37,14 @@ export const ExcelExportModal: React.FC<ExcelExportModalProps> = ({
   const [customStartDate, setCustomStartDate] = useState<string>('');
   const [customEndDate, setCustomEndDate] = useState<string>('');
   const [customDestination, setCustomDestination] = useState<string>('ALL');
+  const [customStudentFilter, setCustomStudentFilter] = useState<'ALL' | 'STUDENT' | 'STANDARD'>('ALL');
   const [includeItemsBreakdown, setIncludeItemsBreakdown] = useState<boolean>(true);
   const [customFileName, setCustomFileName] = useState<string>(
     `LoyalisTrans_Bons_${new Date().toISOString().slice(0, 10)}.xlsx`
   );
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const [exportSuccess, setExportSuccess] = useState<boolean>(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
@@ -57,9 +61,14 @@ export const ExcelExportModal: React.FC<ExcelExportModalProps> = ({
         if (customEndDate) list = list.filter(v => v.date <= customEndDate);
         if (customDestination && customDestination !== 'ALL') {
           list = list.filter(v =>
-            v.destinationCity?.toLowerCase() === customDestination.toLowerCase() ||
-            v.recipient.destination?.toLowerCase().includes(customDestination.toLowerCase())
+            (v.destinationCity || '').toLowerCase() === customDestination.toLowerCase() ||
+            (v.recipient?.destination || '').toLowerCase().includes(customDestination.toLowerCase())
           );
+        }
+        if (customStudentFilter === 'STUDENT') {
+          list = list.filter(v => Boolean(v.isStudent || v.recipient?.isStudent));
+        } else if (customStudentFilter === 'STANDARD') {
+          list = list.filter(v => !Boolean(v.isStudent || v.recipient?.isStudent));
         }
         return list;
       }
@@ -72,8 +81,9 @@ export const ExcelExportModal: React.FC<ExcelExportModalProps> = ({
   const targetVouchers = getVouchersToExport();
 
   const handleExport = () => {
+    setExportError(null);
     if (targetVouchers.length === 0) {
-      alert('Aucun bon à exporter selon la sélection choisie.');
+      setExportError('Aucun bon à exporter selon la sélection choisie.');
       return;
     }
 
@@ -88,9 +98,9 @@ export const ExcelExportModal: React.FC<ExcelExportModalProps> = ({
         setExportSuccess(false);
         onClose();
       }, 1500);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Export error:', err);
-      alert('Erreur lors de l\'exportation Excel');
+      setExportError(err?.message || 'Erreur lors de l\'exportation Excel');
     } finally {
       setIsExporting(false);
     }
@@ -253,20 +263,38 @@ export const ExcelExportModal: React.FC<ExcelExportModalProps> = ({
                 </div>
               </div>
 
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">
-                  Destination / Ville
-                </label>
-                <select
-                  value={customDestination}
-                  onChange={e => setCustomDestination(e.target.value)}
-                  className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-xs"
-                >
-                  <option value="ALL">Toutes les destinations</option>
-                  {settings.defaultAgencies?.map(ag => (
-                    <option key={ag} value={ag}>{ag}</option>
-                  ))}
-                </select>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">
+                    Destination / Ville
+                  </label>
+                  <select
+                    value={customDestination}
+                    onChange={e => setCustomDestination(e.target.value)}
+                    className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-xs"
+                  >
+                    <option value="ALL">Toutes les destinations</option>
+                    {settings.defaultAgencies?.map(ag => (
+                      <option key={ag} value={ag}>{ag}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1 flex items-center gap-1">
+                    <GraduationCap className="w-3.5 h-3.5 text-purple-600" />
+                    Option Étudiant
+                  </label>
+                  <select
+                    value={customStudentFilter}
+                    onChange={e => setCustomStudentFilter(e.target.value as any)}
+                    className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-xs"
+                  >
+                    <option value="ALL">Tous les profils (Étudiants & Standard)</option>
+                    <option value="STUDENT">🎓 Étudiants uniquement</option>
+                    <option value="STANDARD">Standard (Non étudiants)</option>
+                  </select>
+                </div>
               </div>
             </div>
           )}
@@ -298,6 +326,14 @@ export const ExcelExportModal: React.FC<ExcelExportModalProps> = ({
               />
             </div>
           </div>
+
+          {/* Export Error Alert */}
+          {exportError && (
+            <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-xl text-xs text-rose-700 dark:text-rose-300 font-semibold flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" />
+              <span>{exportError}</span>
+            </div>
+          )}
 
           {/* Target Count Preview Badge */}
           <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900 rounded-xl flex items-center justify-between">

@@ -19,7 +19,8 @@ import {
   Eye,
   Clock,
   Sparkles,
-  Info
+  Info,
+  AlertCircle
 } from 'lucide-react';
 import { AgentProfile, CompanySettings, Voucher } from '../types';
 import { formatCurrency, formatDate } from '../utils/formatters';
@@ -47,6 +48,7 @@ export const VoucherValidationModal: React.FC<VoucherValidationModalProps> = ({
   const [rotation, setRotation] = useState<number>(0);
   const [validationNotes, setValidationNotes] = useState<string>(voucher?.validationNotes || '');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Verification Checklist Checkboxes
   const [checkSender, setCheckSender] = useState<boolean>(true);
@@ -61,11 +63,12 @@ export const VoucherValidationModal: React.FC<VoucherValidationModalProps> = ({
 
   const handleApprove = async () => {
     try {
+      setSubmitError(null);
       setIsSubmitting(true);
       await onValidate(voucher.id, true, validationNotes || 'Bon réel vérifié et validé sans contrainte.');
       onClose();
     } catch (err: any) {
-      alert(err.message || 'Erreur lors de la validation');
+      setSubmitError(err.message || 'Erreur lors de la validation');
     } finally {
       setIsSubmitting(false);
     }
@@ -73,11 +76,12 @@ export const VoucherValidationModal: React.FC<VoucherValidationModalProps> = ({
 
   const handleRevokeOrReject = async () => {
     try {
+      setSubmitError(null);
       setIsSubmitting(true);
       await onValidate(voucher.id, false, validationNotes || 'Validation révoquée / Rectification demandée.');
       onClose();
     } catch (err: any) {
-      alert(err.message || 'Erreur lors de la mise à jour');
+      setSubmitError(err.message || 'Erreur lors de la mise à jour');
     } finally {
       setIsSubmitting(false);
     }
@@ -387,6 +391,12 @@ export const VoucherValidationModal: React.FC<VoucherValidationModalProps> = ({
                 />
               </div>
 
+              {submitError && (
+                <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-xl text-xs text-rose-700 dark:text-rose-300 font-semibold flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" />
+                  <span>{submitError}</span>
+                </div>
+              )}
             </div>
 
             {/* Validation Action Buttons */}

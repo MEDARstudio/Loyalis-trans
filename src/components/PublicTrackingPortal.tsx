@@ -63,7 +63,7 @@ export const PublicTrackingPortal: React.FC<PublicTrackingPortalProps> = ({
 
     const found = vouchers.find(v => {
       // 1. Exact match on trackingNumber (e.g. "0000501" or "lt-0000501")
-      if (v.trackingNumber.toLowerCase() === term) return true;
+      if ((v.trackingNumber || '').toLowerCase() === term) return true;
 
       // 2. Numeric sequence match (e.g. typing "501" matches "0000501")
       const vDigits = String(v.trackingNumber || '').replace(/\D/g, '');

@@ -1,5 +1,5 @@
 import { pgTable, text, serial, integer, doublePrecision, boolean, timestamp, jsonb } from 'drizzle-orm/pg-core';
-import { LuggageItem, VoucherPhoto } from '../types.ts';
+import { LuggageItem, VoucherPhoto, VoucherModificationHistory } from '../types.ts';
 
 // Users table (Firebase Auth linkage)
 export const users = pgTable('users', {
@@ -104,4 +104,8 @@ export const vouchersTable = pgTable('vouchers', {
   externalCost: doublePrecision('external_cost').default(0),
   externalPaymentStatus: text('external_payment_status').default('PAID'), // 'PAID' | 'UNPAID'
   externalNotes: text('external_notes'),
+
+  // Option Étudiant & Historique
+  isStudent: boolean('is_student').default(false),
+  history: jsonb('history').$type<VoucherModificationHistory[]>().default([]),
 });

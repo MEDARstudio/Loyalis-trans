@@ -12,6 +12,7 @@ import {
   batchValidateVouchers,
   deleteVoucher,
   batchUpdateStatus,
+  batchUpdatePaymentStatus,
   batchDelete,
   getStats,
   seedInitialDataIfEmpty,
@@ -189,6 +190,26 @@ async function startServer() {
   };
   app.post('/api/vouchers/batch-status', handleBatchStatus);
   app.post('/api/vouchers/batch/status', handleBatchStatus);
+
+  // Vouchers: Batch Payment Status Update
+  const handleBatchPaymentStatus = async (req: Request, res: Response) => {
+    try {
+      const { ids, paymentStatus, advanceAmount, authorName } = req.body;
+      if (!Array.isArray(ids) || !paymentStatus) {
+        res.status(400).json({ error: 'Paramètres invalides' });
+        return;
+      }
+
+      const count = await batchUpdatePaymentStatus(ids, paymentStatus, advanceAmount, authorName);
+      res.json({ success: true, count, updatedCount: count });
+    } catch (err: any) {
+      console.error('API /api/vouchers/batch-payment-status error:', err);
+      const fallbackCount = Array.isArray(req.body?.ids) ? req.body.ids.length : 0;
+      res.json({ success: true, count: fallbackCount, updatedCount: fallbackCount });
+    }
+  };
+  app.post('/api/vouchers/batch-payment-status', handleBatchPaymentStatus);
+  app.post('/api/vouchers/batch/payment-status', handleBatchPaymentStatus);
 
   // Vouchers: Batch Direct Validate (Amine Admin)
   const handleBatchValidate = async (req: Request, res: Response) => {

@@ -36,7 +36,8 @@ import {
   Share2,
   ExternalLink,
   Calculator,
-  Info
+  Info,
+  GraduationCap
 } from 'lucide-react';
 import { CompanySettings, Voucher, VoucherStats, VoucherStatus } from '../types';
 import { formatCurrency, formatDate, getPaymentStatusInfo, getStatusBadge } from '../utils/formatters';
@@ -122,6 +123,9 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
   const [selectedCarrierFilter, setSelectedCarrierFilter] = useState<string>('ALL');
   const [selectedCarrierPaymentFilter, setSelectedCarrierPaymentFilter] = useState<'ALL' | 'PAID' | 'UNPAID'>('ALL');
   const [showSubcontractedTable, setShowSubcontractedTable] = useState<boolean>(true);
+  
+  // Student Profile Filter ('ALL' | 'STUDENT' | 'STANDARD')
+  const [studentProfileFilter, setStudentProfileFilter] = useState<'ALL' | 'STUDENT' | 'STANDARD'>('ALL');
 
   // Calculation Transparency & Audit Modal State
   const [calculationTarget, setCalculationTarget] = useState<CalculationTarget | null>(null);
@@ -269,18 +273,36 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
   const filteredVouchers = useMemo(() => {
     return vouchers.filter(v => {
       const vDate = parseVoucherDate(v);
-      return vDate >= startDate && vDate <= endDate;
+      const inDateRange = vDate >= startDate && vDate <= endDate;
+      if (!inDateRange) return false;
+
+      if (studentProfileFilter === 'STUDENT') {
+        return Boolean(v.isStudent || v.recipient?.isStudent);
+      }
+      if (studentProfileFilter === 'STANDARD') {
+        return !Boolean(v.isStudent || v.recipient?.isStudent);
+      }
+      return true;
     });
-  }, [vouchers, startDate, endDate]);
+  }, [vouchers, startDate, endDate, studentProfileFilter]);
 
   // Filter vouchers in previous equivalent period for trend calculations
   const previousPeriodVouchers = useMemo(() => {
     if (selectedPreset === 'ALL') return [];
     return vouchers.filter(v => {
       const vDate = parseVoucherDate(v);
-      return vDate >= previousStartDate && vDate <= previousEndDate;
+      const inDateRange = vDate >= previousStartDate && vDate <= previousEndDate;
+      if (!inDateRange) return false;
+
+      if (studentProfileFilter === 'STUDENT') {
+        return Boolean(v.isStudent || v.recipient?.isStudent);
+      }
+      if (studentProfileFilter === 'STANDARD') {
+        return !Boolean(v.isStudent || v.recipient?.isStudent);
+      }
+      return true;
     });
-  }, [vouchers, previousStartDate, previousEndDate, selectedPreset]);
+  }, [vouchers, previousStartDate, previousEndDate, selectedPreset, studentProfileFilter]);
 
   // Calculate dynamic metrics for current period
   const periodMetrics = useMemo(() => {
@@ -295,6 +317,12 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
     let arrivedCount = 0;
     let deliveredCount = 0;
     let cancelledCount = 0;
+
+    // Student metrics
+    let studentVouchersCount = 0;
+    let studentRevenue = 0;
+    let studentWeight = 0;
+    let studentColis = 0;
 
     // External Carrier / Subcontracting metrics
     let totalExternalVouchersCount = 0;
@@ -404,6 +432,15 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
       totalRemaining += paymentInfo.remaining;
       if (paymentInfo.type === 'AVANCE') totalAdvance += paymentInfo.advance;
 
+      // Student profiling
+      const isStud = Boolean(v.isStudent || v.recipient?.isStudent);
+      if (isStud) {
+        studentVouchersCount++;
+        studentRevenue += price;
+        studentWeight += weight;
+        studentColis += colis;
+      }
+
       // Destination
       const dest = v.destinationCity || v.recipient.destination || 'Autre';
       if (!destinations[dest]) destinations[dest] = { count: 0, weight: 0, revenue: 0 };
@@ -480,6 +517,11 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
       agents: Object.entries(agentsMap).sort((a, b) => b[1].count - a[1].count),
       hourlyDistribution,
       dayOfWeekDistribution,
+      // Student metrics
+      studentVouchersCount,
+      studentRevenue,
+      studentWeight,
+      studentColis,
       // External / Subcontracting exports
       totalExternalVouchersCount,
       totalExternalCost,
@@ -626,7 +668,6 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
   // Export filtered vouchers to Excel
   const handleExportFilteredExcel = () => {
     if (filteredVouchers.length === 0) {
-      alert("Aucune donnée disponible pour la période sélectionnée.");
       return;
     }
 
@@ -871,6 +912,49 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
             Plage : <span className="font-bold text-slate-800 dark:text-slate-200">{formatDate(formatDateToInput(startDate))}</span> au <span className="font-bold text-slate-800 dark:text-slate-200">{formatDate(formatDateToInput(endDate))}</span>
           </div>
 
+          {/* Student Profile Quick Filter */}
+          <div className="flex items-center gap-1.5 sm:ml-auto">
+            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+              <GraduationCap className="w-3.5 h-3.5 text-purple-600" />
+              Profil :
+            </span>
+            <div className="inline-flex p-1 bg-slate-100 dark:bg-slate-800 rounded-xl gap-1">
+              <button
+                type="button"
+                onClick={() => setStudentProfileFilter('ALL')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  studentProfileFilter === 'ALL'
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs font-black'
+                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+              >
+                Tous
+              </button>
+              <button
+                type="button"
+                onClick={() => setStudentProfileFilter('STUDENT')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                  studentProfileFilter === 'STUDENT'
+                    ? 'bg-purple-600 text-white shadow-2xs font-black'
+                    : 'text-purple-600 dark:text-purple-400 hover:text-purple-700'
+                }`}
+              >
+                🎓 Étudiants ({periodMetrics.studentVouchersCount})
+              </button>
+              <button
+                type="button"
+                onClick={() => setStudentProfileFilter('STANDARD')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  studentProfileFilter === 'STANDARD'
+                    ? 'bg-slate-700 text-white shadow-2xs font-black'
+                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+              >
+                Standard
+              </button>
+            </div>
+          </div>
+
         </div>
 
       </div>
@@ -910,7 +994,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
             </div>
           </div>
           
-          <div className="text-3xl sm:text-4xl font-black text-orange-500 font-mono tracking-tight">
+          <div className="text-2xl sm:text-3xl lg:text-4xl font-black text-orange-500 font-mono tracking-tight truncate">
             {periodMetrics.totalVouchers}
           </div>
           
@@ -932,7 +1016,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
         {/* Total Revenue */}
         <div 
           onClick={() => handleOpenCalculation({ type: 'TOTAL_REVENUE', title: "Chiffre d'Affaires Total Facturé" })}
-          className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-2 cursor-pointer hover:border-emerald-500 hover:ring-2 hover:ring-emerald-500/20 transition-all group"
+          className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-2 cursor-pointer hover:border-emerald-500 hover:ring-2 hover:ring-emerald-500/20 transition-all group overflow-hidden"
           title="Cliquez pour voir le détail du calcul du Chiffre d'Affaires"
         >
           <div className="flex items-center justify-between">
@@ -942,16 +1026,16 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
             </div>
           </div>
           
-          <div className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white font-mono tracking-tight">
+          <div className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900 dark:text-white font-mono tracking-tight truncate" title={formatCurrency(periodMetrics.totalRevenue, currency)}>
             {formatCurrency(periodMetrics.totalRevenue, currency)}
           </div>
           
           <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100 dark:border-slate-800">
-            <span className="text-slate-500 font-semibold group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors flex items-center gap-1">
+            <span className="text-slate-500 font-semibold group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors flex items-center gap-1 truncate">
               Moy. : ~{formatCurrency(periodMetrics.avgRevenue, currency)}/bon ➔
             </span>
             {selectedPreset !== 'ALL' && (
-              <span className={`inline-flex items-center gap-0.5 font-bold font-mono text-[11px] ${
+              <span className={`inline-flex items-center gap-0.5 font-bold font-mono text-[11px] shrink-0 ${
                 trends.revenue >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
               }`}>
                 {trends.revenue >= 0 ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownRight className="w-3.5 h-3.5" />}
@@ -964,7 +1048,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
         {/* Total Weight */}
         <div 
           onClick={() => handleOpenCalculation({ type: 'TOTAL_WEIGHT', title: "Poids Total Transporté" })}
-          className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-2 cursor-pointer hover:border-blue-500 hover:ring-2 hover:ring-blue-500/20 transition-all group"
+          className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-2 cursor-pointer hover:border-blue-500 hover:ring-2 hover:ring-blue-500/20 transition-all group overflow-hidden"
           title="Cliquez pour voir le détail du calcul du poids"
         >
           <div className="flex items-center justify-between">
@@ -974,16 +1058,16 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
             </div>
           </div>
           
-          <div className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white font-mono tracking-tight">
+          <div className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900 dark:text-white font-mono tracking-tight truncate">
             {Math.round(periodMetrics.totalWeight * 10) / 10} <span className="text-sm font-bold text-slate-400">kg</span>
           </div>
           
           <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100 dark:border-slate-800">
-            <span className="text-slate-500 font-semibold group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors flex items-center gap-1">
+            <span className="text-slate-500 font-semibold group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors flex items-center gap-1 truncate">
               Moy. : ~{periodMetrics.avgWeight} kg/bon ➔
             </span>
             {selectedPreset !== 'ALL' && (
-              <span className={`inline-flex items-center gap-0.5 font-bold font-mono text-[11px] ${
+              <span className={`inline-flex items-center gap-0.5 font-bold font-mono text-[11px] shrink-0 ${
                 trends.weight >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-rose-600 dark:text-rose-400'
               }`}>
                 {trends.weight >= 0 ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownRight className="w-3.5 h-3.5" />}
@@ -996,7 +1080,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
         {/* Total Colis Count */}
         <div 
           onClick={() => handleOpenCalculation({ type: 'TOTAL_COLIS', title: "Nombre Total de Colis" })}
-          className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-2 cursor-pointer hover:border-purple-500 hover:ring-2 hover:ring-purple-500/20 transition-all group"
+          className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-2 cursor-pointer hover:border-purple-500 hover:ring-2 hover:ring-purple-500/20 transition-all group overflow-hidden"
           title="Cliquez pour voir le détail du calcul des colis"
         >
           <div className="flex items-center justify-between">
@@ -1006,15 +1090,15 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
             </div>
           </div>
           
-          <div className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white font-mono tracking-tight">
+          <div className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900 dark:text-white font-mono tracking-tight truncate">
             {periodMetrics.totalColis} <span className="text-sm font-bold text-slate-400">colis</span>
           </div>
           
           <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100 dark:border-slate-800">
-            <span className="text-slate-500 font-semibold group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors flex items-center gap-1">
+            <span className="text-slate-500 font-semibold group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors flex items-center gap-1 truncate">
               Moy. : ~{periodMetrics.avgColis} colis/bon ➔
             </span>
-            <span className="text-xs font-bold text-purple-600 font-mono">
+            <span className="text-xs font-bold text-purple-600 font-mono shrink-0">
               Livrés : {periodMetrics.deliveryRate}%
             </span>
           </div>

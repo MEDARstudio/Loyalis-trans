@@ -45,26 +45,26 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
             {isDestructive ? <Trash2 className="w-6 h-6" /> : <AlertTriangle className="w-6 h-6" />}
           </div>
 
-          <div className="flex-1">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-black text-slate-900 dark:text-white">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-base font-black text-slate-900 dark:text-white truncate">
                 {title}
               </h3>
               <button 
                 id="btn-close-confirm"
                 onClick={onClose}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-1 rounded-lg transition-colors"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-1 rounded-lg transition-colors shrink-0"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <p className="mt-2 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-400 leading-relaxed break-words">
               {message}
             </p>
           </div>
         </div>
 
-        <div className="mt-6 flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+        <div className="mt-6 flex flex-wrap items-center justify-end gap-2.5 pt-4 border-t border-slate-100 dark:border-slate-800">
           <button
             id="btn-cancel-confirm"
             type="button"

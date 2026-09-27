@@ -105,7 +105,8 @@ export const VoucherPrintView: React.FC<VoucherPrintViewProps> = ({
         setDownloadSuccess('Image PNG HD générée avec succès !');
         setTimeout(() => setDownloadSuccess(null), 3000);
       } else {
-        alert("Erreur lors de la génération de l'image. Utilisez le téléchargement PDF.");
+        setDownloadSuccess("Erreur lors de la génération de l'image. Utilisez le téléchargement PDF.");
+        setTimeout(() => setDownloadSuccess(null), 4000);
       }
     } catch (err) {
       console.error('Image export error:', err);

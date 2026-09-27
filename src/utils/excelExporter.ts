@@ -51,6 +51,7 @@ export function exportVouchersToExcel(
     row['Téléphone Expéditeur'] = v.sender.phone;
     row['Adresse Expéditeur'] = v.sender.address || '-';
     row['Destinataire'] = v.recipient.name;
+    row['Option Destinataire Étudiant'] = (v.isStudent || v.recipient?.isStudent) ? 'OUI (Étudiant)' : 'NON (Standard)';
     row['Destination / Ville'] = v.recipient.destination;
     row['Téléphone Destinataire'] = v.recipient.phone;
     row['Nombre de Colis'] = v.totalColis;
@@ -93,6 +94,7 @@ export function exportVouchersToExcel(
     'Téléphone Expéditeur': '',
     'Adresse Expéditeur': '',
     'Destinataire': '',
+    'Option Destinataire Étudiant': `${vouchers.filter(v => v.isStudent || v.recipient?.isStudent).length} étudiant(s)`,
     'Destination / Ville': '',
     'Téléphone Destinataire': '',
     'Nombre de Colis': totalColisSum,

@@ -34,7 +34,9 @@ import {
   Eye,
   Image as ImageIcon,
   Lock,
-  CloudUpload
+  CloudUpload,
+  GraduationCap,
+  History
 } from 'lucide-react';
 import { CompanySettings, Voucher, VoucherStatus, AgentProfile } from '../types';
 import { formatCurrency, formatDate, formatDateTime, getPaymentStatusInfo, getStatusBadge } from '../utils/formatters';
@@ -78,6 +80,7 @@ export const VoucherDetailModal: React.FC<VoucherDetailModalProps> = ({
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
   const [showPaymentQuickMenu, setShowPaymentQuickMenu] = useState<boolean>(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState<boolean>(false);
+  const [restrictionMsg, setRestrictionMsg] = useState<string | null>(null);
 
   // Photo viewer state
   const [isPhotoViewerOpen, setIsPhotoViewerOpen] = useState<boolean>(false);
@@ -112,21 +115,25 @@ export const VoucherDetailModal: React.FC<VoucherDetailModalProps> = ({
   };
 
   const handleWhatsAppSender = () => {
-    const phone = (voucher.sender.phone || '').replace(/\D/g, '');
+    const phone = (voucher.sender?.phone || '').replace(/\D/g, '');
     if (!phone) return;
     const msg = encodeURIComponent(
-      `Bonjour ${voucher.sender.name}, Loyalis Trans confirme l'enregistrement de votre bon de bagages N° ${voucher.trackingNumber} à destination de ${voucher.recipient.destination || voucher.destinationCity}. Statut: ${statusInfo.label}. Reste à payer: ${formatCurrency(paymentInfo.remaining, currency)}.`
+      `Bonjour ${voucher.sender?.name || ''}, Loyalis Trans confirme l'enregistrement de votre bon de bagages N° ${voucher.trackingNumber} à destination de ${voucher.recipient?.destination || voucher.destinationCity || ''}. Statut: ${statusInfo.label}. Reste à payer: ${formatCurrency(paymentInfo.remaining, currency)}.`
     );
-    window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
+    try {
+      window.open(`https://wa.me/${phone}?text=${msg}`, '_blank', 'noopener,noreferrer');
+    } catch {}
   };
 
   const handleWhatsAppRecipient = () => {
-    const phone = (voucher.recipient.phone || '').replace(/\D/g, '');
+    const phone = (voucher.recipient?.phone || '').replace(/\D/g, '');
     if (!phone) return;
     const msg = encodeURIComponent(
-      `Bonjour ${voucher.recipient.name}, vous avez un envoi de bagages/colis enregistré par ${voucher.sender.name} chez Loyalis Trans (N° Suivi: ${voucher.trackingNumber}). Destination: ${voucher.recipient.destination || voucher.destinationCity}. Montant à régler à réception: ${formatCurrency(paymentInfo.remaining, currency)}.`
+      `Bonjour ${voucher.recipient?.name || ''}, vous avez un envoi de bagages/colis enregistré par ${voucher.sender?.name || ''} chez Loyalis Trans (N° Suivi: ${voucher.trackingNumber}). Destination: ${voucher.recipient?.destination || voucher.destinationCity || ''}. Montant à régler à réception: ${formatCurrency(paymentInfo.remaining, currency)}.`
     );
-    window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
+    try {
+      window.open(`https://wa.me/${phone}?text=${msg}`, '_blank', 'noopener,noreferrer');
+    } catch {}
   };
 
   return (
@@ -266,7 +273,10 @@ export const VoucherDetailModal: React.FC<VoucherDetailModalProps> = ({
             {currentAgent && !currentAgent.canDelete ? (
               <button
                 type="button"
-                onClick={() => alert("Action restreinte : Seul l'administrateur (Amine) a le droit de supprimer des bons.")}
+                onClick={() => {
+                  setRestrictionMsg("Action restreinte : Seul l'administrateur (Amine) a le droit de supprimer des bons.");
+                  setTimeout(() => setRestrictionMsg(null), 3500);
+                }}
                 className="p-1.5 rounded-xl text-slate-300 dark:text-slate-700 cursor-not-allowed"
                 title="Suppression bloquée (Réservée à l'administrateur Amine)"
               >
@@ -288,6 +298,14 @@ export const VoucherDetailModal: React.FC<VoucherDetailModalProps> = ({
         {/* Scrollable Content Body */}
         <div className="p-3.5 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto overflow-x-hidden flex-1 text-slate-800 dark:text-slate-200">
           
+          {/* Restriction Message Banner */}
+          {restrictionMsg && (
+            <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-rose-600 dark:text-rose-400 text-xs font-bold flex items-center gap-2">
+              <Lock className="w-4 h-4 shrink-0" />
+              <span>{restrictionMsg}</span>
+            </div>
+          )}
+
           {/* Validation Status & Audit Card */}
           <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
             isActuallyValidated 
@@ -369,31 +387,31 @@ export const VoucherDetailModal: React.FC<VoucherDetailModalProps> = ({
           </div>
 
           {/* Trajet & Logistics Banner */}
-          <div className="p-5 rounded-2xl bg-gradient-to-r from-slate-900 to-slate-800 text-white shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-orange-600/20 border border-orange-500/30 flex items-center justify-center text-orange-400 shrink-0">
-                <Truck className="w-6 h-6" />
+          <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-slate-900 to-slate-800 text-white shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4 overflow-hidden">
+            <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-orange-600/20 border border-orange-500/30 flex items-center justify-center text-orange-400 shrink-0">
+                <Truck className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
-              <div>
-                <span className="text-[11px] font-bold uppercase tracking-wider text-orange-300 block">
+              <div className="min-w-0 flex-1">
+                <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-orange-300 block">
                   Itinéraire & Trajet
                 </span>
-                <div className="text-xl sm:text-2xl font-black flex items-center gap-2">
-                  <span>{voucher.departureCity || 'Casablanca'}</span>
-                  <ArrowRight className="w-5 h-5 text-orange-400" />
-                  <span className="text-orange-400">{voucher.recipient.destination || voucher.destinationCity}</span>
+                <div className="text-lg sm:text-2xl font-black flex items-center gap-1.5 sm:gap-2 flex-wrap min-w-0 break-words">
+                  <span className="break-words">{voucher.departureCity || 'Casablanca'}</span>
+                  <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-orange-400 shrink-0" />
+                  <span className="text-orange-400 break-words">{voucher.recipient.destination || voucher.destinationCity}</span>
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-4 text-xs">
-              <div className="bg-white/10 px-3.5 py-2 rounded-xl border border-white/10">
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">Agence</span>
-                <span className="font-bold">{voucher.agencyName || settings.companyName}</span>
+            <div className="flex items-center gap-2 sm:gap-4 text-xs shrink-0 flex-wrap">
+              <div className="bg-white/10 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl border border-white/10">
+                <span className="text-slate-400 block text-[9px] sm:text-[10px] uppercase font-bold">Agence</span>
+                <span className="font-bold truncate max-w-[120px] block">{voucher.agencyName || settings.companyName}</span>
               </div>
-              <div className="bg-white/10 px-3.5 py-2 rounded-xl border border-white/10">
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">Agent</span>
-                <span className="font-bold">{voucher.agentName || 'Agent Guichet'}</span>
+              <div className="bg-white/10 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl border border-white/10">
+                <span className="text-slate-400 block text-[9px] sm:text-[10px] uppercase font-bold">Agent</span>
+                <span className="font-bold truncate max-w-[120px] block">{voucher.agentName || 'Agent Guichet'}</span>
               </div>
             </div>
           </div>
@@ -520,6 +538,28 @@ export const VoucherDetailModal: React.FC<VoucherDetailModalProps> = ({
                     </span>
                   </div>
                 )}
+
+                {/* Option Étudiant Badge */}
+                {(voucher.isStudent || voucher.recipient?.isStudent) && (
+                  <div className="mt-2.5 p-2.5 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-500/40 flex flex-wrap items-center justify-between gap-2 shadow-xs">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-purple-600 to-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                        <GraduationCap className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <span className="text-xs font-black uppercase text-purple-900 dark:text-purple-200 block truncate">
+                          Destinataire Étudiant 🎓
+                        </span>
+                        <span className="text-[10px] text-purple-700 dark:text-purple-300 font-medium block truncate">
+                          Tarif & profil étudiant validé
+                        </span>
+                      </div>
+                    </div>
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-purple-600 text-white shadow-xs shrink-0">
+                      Option Étudiant
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -600,8 +640,8 @@ export const VoucherDetailModal: React.FC<VoucherDetailModalProps> = ({
               </div>
 
               {/* Quick status change buttons */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-500 font-semibold">Changer statut paiement :</span>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs text-slate-500 font-semibold shrink-0">Changer statut paiement :</span>
                 <button
                   onClick={() => onUpdatePayment(voucher.id, 'PAYE', voucher.totalPrice)}
                   className={`px-2.5 py-1 text-xs font-bold rounded-lg border transition-all ${
@@ -938,6 +978,92 @@ export const VoucherDetailModal: React.FC<VoucherDetailModalProps> = ({
               </p>
             </div>
           )}
+
+          {/* Section: Historique & Journal des Modifications et Motifs */}
+          <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 space-y-3.5">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-700/80 pb-3">
+              <div className="flex items-center gap-2">
+                <History className="w-5 h-5 text-orange-600" />
+                <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                  Historique Complet & Journal des Modifications ({voucher.history?.length || 1})
+                </h3>
+              </div>
+              <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                Traçabilité intégrale avec dates, heures et motifs
+              </span>
+            </div>
+
+            {/* Timeline entries */}
+            {voucher.history && voucher.history.length > 0 ? (
+              <div className="space-y-3">
+                {voucher.history.map((entry, idx) => (
+                  <div 
+                    key={entry.id || idx}
+                    className="p-3.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700/80 shadow-xs space-y-2 relative overflow-hidden"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-2.5 h-2.5 rounded-full ${
+                          entry.actionType === 'CREATION' ? 'bg-emerald-500' :
+                          entry.actionType === 'PAYMENT_CHANGE' ? 'bg-amber-500' :
+                          entry.actionType === 'STATUS_CHANGE' ? 'bg-blue-500' :
+                          entry.actionType === 'VALIDATION' ? 'bg-purple-500' : 'bg-orange-500'
+                        }`} />
+                        <strong className="text-xs font-black uppercase tracking-wide text-slate-900 dark:text-white">
+                          {entry.title || 'Modification'}
+                        </strong>
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                          Par : {entry.authorName || 'Agent'}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 text-[11px] font-mono font-bold text-slate-500 dark:text-slate-400">
+                        <Clock className="w-3.5 h-3.5 text-slate-400" />
+                        <span>
+                          {entry.dateFormatted || (entry.timestamp ? new Date(entry.timestamp).toLocaleString('fr-FR') : 'Date')}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Motif / Raison de la modification */}
+                    {entry.motif && (
+                      <div className="p-2.5 rounded-lg bg-orange-50/70 dark:bg-orange-950/20 border border-orange-200/60 dark:border-orange-900/40 text-xs">
+                        <span className="font-bold text-orange-900 dark:text-orange-300 text-[10px] uppercase block">
+                          Motif de la modification :
+                        </span>
+                        <p className="text-slate-800 dark:text-slate-200 font-medium mt-0.5">
+                          « {entry.motif} »
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Changed Fields list if any */}
+                    {entry.changes && entry.changes.length > 0 && (
+                      <div className="pt-1 flex flex-wrap gap-2">
+                        {entry.changes.map((chg, cIdx) => (
+                          <div 
+                            key={cIdx} 
+                            className="px-2.5 py-1 rounded-md bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[11px] text-slate-700 dark:text-slate-300"
+                          >
+                            <span className="font-bold text-slate-500 dark:text-slate-400">{chg.field} : </span>
+                            {chg.oldValue !== undefined && (
+                              <span className="line-through text-slate-400 mr-1">{String(chg.oldValue)}</span>
+                            )}
+                            <span className="font-black text-orange-600 dark:text-orange-400">➔ {String(chg.newValue)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400 flex flex-wrap items-center justify-between gap-2">
+                <span>Création initiale le {formatDateTime(voucher.createdAt || voucher.date)} par {voucher.createdByAgent || voucher.agentName || 'Agent'}. Aucune modification ultérieure.</span>
+                <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300 font-bold text-[10px]">Version Originale</span>
+              </div>
+            )}
+          </div>
 
           {/* Footer Timestamp info */}
           <div className="pt-2 flex flex-wrap items-center justify-between text-[11px] text-slate-400 font-mono">

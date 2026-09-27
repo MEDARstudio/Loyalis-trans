@@ -176,7 +176,9 @@ export const BatchShareModal: React.FC<BatchShareModalProps> = ({
       ? `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${text}`
       : `https://api.whatsapp.com/send?text=${text}`;
 
-    window.open(waUrl, '_blank', 'noopener,noreferrer');
+    try {
+      window.open(waUrl, '_blank', 'noopener,noreferrer');
+    } catch {}
   };
 
   // Download all digital images one by one

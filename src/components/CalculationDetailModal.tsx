@@ -775,7 +775,6 @@ export const CalculationDetailModal: React.FC<CalculationDetailModalProps> = ({
   // Export specific detail to Excel
   const handleExportDetailExcel = () => {
     if (details.relevantVouchers.length === 0) {
-      alert("Aucune donnée à exporter.");
       return;
     }
 
@@ -898,16 +897,16 @@ export const CalculationDetailModal: React.FC<CalculationDetailModalProps> = ({
             {details.metricCards.map((card, idx) => (
               <div 
                 key={idx} 
-                className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-1"
+                className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-1 min-w-0 overflow-hidden"
               >
                 <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block truncate">
                   {card.label}
                 </span>
-                <span className={`text-lg sm:text-xl font-black font-mono block ${card.color || 'text-slate-900 dark:text-white'}`}>
+                <span className={`text-base sm:text-lg lg:text-xl font-black font-mono block truncate ${card.color || 'text-slate-900 dark:text-white'}`} title={card.value}>
                   {card.value}
                 </span>
                 {card.hint && (
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium block">
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium block truncate">
                     {card.hint}
                   </span>
                 )}

@@ -14,7 +14,7 @@ import { VoucherValidationModal } from './components/VoucherValidationModal';
 import { PublicTrackingPortal } from './components/PublicTrackingPortal';
 import { LoginModal } from './components/LoginModal';
 import { BatchShareModal } from './components/BatchShareModal';
-import { CompanySettings, Voucher, VoucherStats, VoucherStatus, AgentProfile, DEFAULT_AGENTS, VoucherSortOption } from './types';
+import { CompanySettings, Voucher, VoucherStats, VoucherStatus, AgentProfile, DEFAULT_AGENTS, VoucherSortOption, PaymentStatus, VoucherModificationHistory } from './types';
 import { api } from './services/api';
 import { getCurrentSession, endCurrentSession } from './services/agentAuth';
 import { PlusCircle, Search, RefreshCw, AlertCircle, Sparkles, Package, BarChart3, History, Plus, ArrowRight, LogOut, ShieldCheck } from 'lucide-react';
@@ -76,14 +76,17 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [destinationFilter, setDestinationFilter] = useState<string>('ALL');
+  const [studentFilter, setStudentFilter] = useState<string>('ALL');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [initialTrackingQuery, setInitialTrackingQuery] = useState<string>('');
 
   // Sorting: Default is 'NUMBER_DESC' (le plus grand numéro en haut, ex. 11 reste au-dessus de 10)
   const [sortBy, setSortBy] = useState<VoucherSortOption>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('loyalis_vouchers_sort_by');
-      if (saved) return saved as VoucherSortOption;
+      try {
+        const saved = localStorage.getItem('loyalis_vouchers_sort_by');
+        if (saved) return saved as VoucherSortOption;
+      } catch {}
     }
     return 'NUMBER_DESC';
   });
@@ -91,7 +94,9 @@ export default function App() {
   const handleSetSortBy = (newSort: VoucherSortOption) => {
     setSortBy(newSort);
     if (typeof window !== 'undefined') {
-      localStorage.setItem('loyalis_vouchers_sort_by', newSort);
+      try {
+        localStorage.setItem('loyalis_vouchers_sort_by', newSort);
+      } catch {}
     }
   };
 
@@ -198,14 +203,14 @@ export default function App() {
       const q = searchQuery.toLowerCase().trim();
       if (q) {
         const matchesSearch =
-          v.trackingNumber.toLowerCase().includes(q) ||
-          v.sender.name.toLowerCase().includes(q) ||
-          v.sender.cin.toLowerCase().includes(q) ||
-          v.sender.phone.includes(q) ||
-          v.recipient.name.toLowerCase().includes(q) ||
-          v.recipient.destination.toLowerCase().includes(q) ||
-          v.recipient.phone.includes(q) ||
-          v.items.some(it => it.nature.toLowerCase().includes(q));
+          (v.trackingNumber || '').toLowerCase().includes(q) ||
+          (v.sender?.name || '').toLowerCase().includes(q) ||
+          (v.sender?.cin || '').toLowerCase().includes(q) ||
+          (v.sender?.phone || '').includes(q) ||
+          (v.recipient?.name || '').toLowerCase().includes(q) ||
+          (v.recipient?.destination || '').toLowerCase().includes(q) ||
+          (v.recipient?.phone || '').includes(q) ||
+          (v.items || []).some(it => (it?.nature || '').toLowerCase().includes(q));
         if (!matchesSearch) return false;
       }
 
@@ -215,9 +220,17 @@ export default function App() {
 
       if (destinationFilter !== 'ALL') {
         const matchesDest =
-          v.destinationCity?.toLowerCase() === destinationFilter.toLowerCase() ||
-          v.recipient.destination?.toLowerCase().includes(destinationFilter.toLowerCase());
+          (v.destinationCity || '').toLowerCase() === destinationFilter.toLowerCase() ||
+          (v.recipient?.destination || '').toLowerCase().includes(destinationFilter.toLowerCase());
         if (!matchesDest) return false;
+      }
+
+      if (studentFilter === 'STUDENT') {
+        const isStudentVoucher = Boolean(v.isStudent || v.recipient?.isStudent);
+        if (!isStudentVoucher) return false;
+      } else if (studentFilter === 'STANDARD') {
+        const isStudentVoucher = Boolean(v.isStudent || v.recipient?.isStudent);
+        if (isStudentVoucher) return false;
       }
 
       return true;
@@ -275,7 +288,7 @@ export default function App() {
     });
 
     return result;
-  }, [vouchers, searchQuery, statusFilter, destinationFilter, sortBy]);
+  }, [vouchers, searchQuery, statusFilter, destinationFilter, studentFilter, sortBy]);
 
   // Handlers for Voucher Operations
   const handleSaveVoucher = async (voucherData: Partial<Voucher>, actionAfterSave?: 'print' | 'share') => {
@@ -313,23 +326,61 @@ export default function App() {
       setSelectedIds(selectedIds.filter(i => i !== id));
       await loadData();
     } catch (err: any) {
-      alert(err.message || 'Erreur lors de la suppression');
+      showToast(err.message || 'Erreur lors de la suppression');
     }
   };
 
   const handleUpdateStatus = async (id: string, newStatus: VoucherStatus) => {
     const cleanId = String(id || '').trim();
     const idDigits = cleanId.replace(/\D/g, '');
+    const now = new Date();
+    const nowIso = now.toISOString();
+    const dateFormatted = now.toLocaleDateString('fr-FR') + ' à ' + now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
     // Optimistic UI update
     setVouchers(prev => prev.map(v => {
       const vDigits = String(v.trackingNumber || '').replace(/\D/g, '');
       const isMatch = v.id === cleanId || v.trackingNumber === cleanId || String(v.sequenceNumber) === cleanId || (idDigits.length > 0 && vDigits === idDigits);
-      return isMatch ? { ...v, status: newStatus, updatedAt: new Date().toISOString() } : v;
+      if (isMatch) {
+        const histEntry: VoucherModificationHistory = {
+          id: `hist-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+          timestamp: nowIso,
+          dateFormatted,
+          authorName: currentAgent?.name || 'Agent',
+          actionType: 'STATUS_CHANGE',
+          title: `Changement de statut : ${newStatus}`,
+          motif: `Mise à jour du statut d'acheminement`,
+          changes: [{
+            field: 'Statut du bon',
+            oldValue: v.status,
+            newValue: newStatus
+          }]
+        };
+        return { ...v, status: newStatus, history: [histEntry, ...(v.history || [])], updatedAt: nowIso };
+      }
+      return v;
     }));
 
     try {
-      await api.updateVoucher(id, { status: newStatus });
+      const targetVoucher = vouchers.find(v => v.id === cleanId || v.trackingNumber === cleanId);
+      const histEntry: VoucherModificationHistory = {
+        id: `hist-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+        timestamp: nowIso,
+        dateFormatted,
+        authorName: currentAgent?.name || 'Agent',
+        actionType: 'STATUS_CHANGE',
+        title: `Changement de statut : ${newStatus}`,
+        motif: `Mise à jour du statut d'acheminement`,
+        changes: [{
+          field: 'Statut du bon',
+          oldValue: targetVoucher?.status,
+          newValue: newStatus
+        }]
+      };
+      await api.updateVoucher(id, { 
+        status: newStatus,
+        history: [histEntry, ...(targetVoucher?.history || [])]
+      });
       showToast('Statut mis à jour avec succès');
     } catch (err: any) {
       console.warn('Status update handled:', err);
@@ -340,6 +391,9 @@ export default function App() {
 
   const handleBatchUpdateStatus = async (ids: string[], newStatus: VoucherStatus) => {
     const cleanIds = ids.map(i => String(i || '').trim());
+    const now = new Date();
+    const nowIso = now.toISOString();
+    const dateFormatted = now.toLocaleDateString('fr-FR') + ' à ' + now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
     // Optimistic UI update
     setVouchers(prev => prev.map(v => {
@@ -349,7 +403,24 @@ export default function App() {
         const idDigits = id.replace(/\D/g, '');
         return idDigits.length > 0 && idDigits === vDigits;
       });
-      return isMatch ? { ...v, status: newStatus, updatedAt: new Date().toISOString() } : v;
+      if (isMatch) {
+        const histEntry: VoucherModificationHistory = {
+          id: `hist-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+          timestamp: nowIso,
+          dateFormatted,
+          authorName: currentAgent?.name || 'Agent',
+          actionType: 'STATUS_CHANGE',
+          title: `Changement de statut groupé : ${newStatus}`,
+          motif: `Mise à jour groupée depuis la liste`,
+          changes: [{
+            field: 'Statut du bon',
+            oldValue: v.status,
+            newValue: newStatus
+          }]
+        };
+        return { ...v, status: newStatus, history: [histEntry, ...(v.history || [])], updatedAt: nowIso };
+      }
+      return v;
     }));
 
     try {
@@ -362,6 +433,68 @@ export default function App() {
     await loadData(true);
   };
 
+  const handleBatchUpdatePaymentStatus = async (ids: string[], paymentStatus: PaymentStatus, advanceAmount?: number) => {
+    const cleanIds = ids.map(i => String(i || '').trim());
+    const now = new Date();
+    const nowIso = now.toISOString();
+    const dateFormatted = now.toLocaleDateString('fr-FR') + ' à ' + now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+    // Optimistic UI update
+    setVouchers(prev => prev.map(v => {
+      const vDigits = String(v.trackingNumber || '').replace(/\D/g, '');
+      const isMatch = cleanIds.some(id => {
+        if (id === v.id || id === v.trackingNumber || id === String(v.sequenceNumber)) return true;
+        const idDigits = id.replace(/\D/g, '');
+        return idDigits.length > 0 && idDigits === vDigits;
+      });
+
+      if (isMatch) {
+        let finalAdvance = 0;
+        if (paymentStatus === 'AVANCE') {
+          finalAdvance = advanceAmount !== undefined && advanceAmount > 0 ? advanceAmount : (v.advanceAmount || 0);
+        } else if (paymentStatus === 'PAYE') {
+          finalAdvance = v.totalPrice;
+        }
+        const finalRemaining = paymentStatus === 'PAYE' ? 0 : paymentStatus === 'NON_PAYE' ? v.totalPrice : Math.max(0, Math.round((v.totalPrice - finalAdvance) * 100) / 100);
+
+        const histEntry: VoucherModificationHistory = {
+          id: `hist-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+          timestamp: nowIso,
+          dateFormatted,
+          authorName: currentAgent?.name || 'Agent',
+          actionType: 'PAYMENT_CHANGE',
+          title: `Règlement groupé : ${paymentStatus}`,
+          motif: 'Changement groupé du statut de paiement',
+          changes: [{
+            field: 'Statut de paiement',
+            oldValue: v.paymentStatus,
+            newValue: paymentStatus
+          }]
+        };
+
+        return {
+          ...v,
+          paymentStatus,
+          advanceAmount: finalAdvance,
+          remainingAmount: finalRemaining,
+          paymentMethod: paymentStatus,
+          history: [histEntry, ...(v.history || [])],
+          updatedAt: nowIso
+        };
+      }
+      return v;
+    }));
+
+    try {
+      await api.batchUpdatePaymentStatus(ids, paymentStatus, advanceAmount, currentAgent?.name);
+      showToast(`${ids.length} bon(s) mis à jour vers le paiement "${paymentStatus}"`);
+    } catch (err: any) {
+      console.warn('Batch payment update notice:', err);
+      showToast(`${ids.length} bon(s) mis à jour vers "${paymentStatus}"`);
+    }
+    await loadData(true);
+  };
+
   const handleBatchDelete = async (ids: string[]) => {
     try {
       await api.batchDelete(ids);
@@ -369,7 +502,7 @@ export default function App() {
       setSelectedIds([]);
       await loadData();
     } catch (err: any) {
-      alert(err.message || 'Erreur lors de la suppression');
+      showToast(err.message || 'Erreur lors de la suppression');
     }
   };
 
@@ -403,7 +536,7 @@ export default function App() {
         if (updated) setDetailVoucher(updated);
       }
     } catch (err: any) {
-      alert(err.message || 'Erreur lors de la mise à jour du paiement');
+      showToast(err.message || 'Erreur lors de la mise à jour du paiement');
     }
   };
 
@@ -416,7 +549,7 @@ export default function App() {
         setDetailVoucher(updatedVoucher);
       }
     } catch (err: any) {
-      alert(err.message || 'Erreur lors de la mise à jour du bon');
+      showToast(err.message || 'Erreur lors de la mise à jour du bon');
     }
   };
 

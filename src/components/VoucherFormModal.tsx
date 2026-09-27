@@ -35,9 +35,10 @@ import {
   TrendingUp,
   ArrowRightLeft,
   Building2,
-  Copy
+  Copy,
+  GraduationCap
 } from 'lucide-react';
-import { AgentProfile, CompanySettings, LuggageItem, PaymentMethod, PaymentStatus, Voucher, VoucherPhoto, VoucherStatus, ExternalPaymentStatus } from '../types';
+import { AgentProfile, CompanySettings, LuggageItem, PaymentMethod, PaymentStatus, Voucher, VoucherPhoto, VoucherStatus, ExternalPaymentStatus, VoucherModificationHistory } from '../types';
 import { formatCurrency, formatTrackingNumber } from '../utils/formatters';
 import { processVoucherPhoto, formatPhotoSize, generatePhotoFilename } from '../utils/imageCompressor';
 import { VoucherPhotoViewerModal } from './VoucherPhotoViewerModal';
@@ -84,6 +85,55 @@ export const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
   const [recipientAddress, setRecipientAddress] = useState<string>('');
   const [departureCity, setDepartureCity] = useState<string>('');
   const [copiedFromSenderToast, setCopiedFromSenderToast] = useState<boolean>(false);
+  const [isStudent, setIsStudent] = useState<boolean>(false); // Option Étudiant
+  const [modificationMotif, setModificationMotif] = useState<string>(''); // Motif de modification
+
+  // Persistent list of cities (combines default agencies, existing vouchers' departures & destinations, and custom stored cities)
+  const [customCities, setCustomCities] = useState<string[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('loyalis_custom_cities');
+        if (stored) return JSON.parse(stored);
+      } catch {}
+    }
+    return [];
+  });
+
+  const allAvailableCities = useMemo(() => {
+    const citySet = new Set<string>();
+    // Default agencies from settings
+    settings.defaultAgencies?.forEach(c => { if (c && c.trim()) citySet.add(c.trim()); });
+    if (settings.defaultDepartureCity?.trim()) citySet.add(settings.defaultDepartureCity.trim());
+    
+    // Custom saved cities
+    customCities.forEach(c => { if (c && c.trim()) citySet.add(c.trim()); });
+
+    // Cities from existing vouchers
+    if (vouchers && vouchers.length > 0) {
+      vouchers.forEach(v => {
+        if (v.departureCity?.trim()) citySet.add(v.departureCity.trim());
+        if (v.destinationCity?.trim()) citySet.add(v.destinationCity.trim());
+        if (v.recipient?.destination?.trim()) citySet.add(v.recipient.destination.trim());
+      });
+    }
+
+    return Array.from(citySet).sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
+  }, [settings, customCities, vouchers]);
+
+  const saveCustomCity = (cityName: string) => {
+    const trimmed = (cityName || '').trim();
+    if (!trimmed || trimmed.length < 2) return;
+    setCustomCities(prev => {
+      if (prev.some(c => c.toLowerCase() === trimmed.toLowerCase())) return prev;
+      const updated = [...prev, trimmed];
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('loyalis_custom_cities', JSON.stringify(updated));
+        } catch {}
+      }
+      return updated;
+    });
+  };
 
   // Luggage Items
   const [items, setItems] = useState<LuggageItem[]>([
@@ -165,6 +215,8 @@ export const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
         setRecipientPhone(initialVoucher.recipient?.phone || '');
         setRecipientAddress(initialVoucher.recipient?.address || '');
         setDepartureCity(initialVoucher.departureCity || settings.defaultDepartureCity || 'Casablanca');
+        setIsStudent(Boolean(initialVoucher.isStudent || initialVoucher.recipient?.isStudent));
+        setModificationMotif('');
 
         const loadedItems = initialVoucher.items?.length
           ? initialVoucher.items.map((it, idx) => ({
@@ -258,6 +310,8 @@ export const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
           ? 'Casablanca' 
           : (currentAgent?.agencyCity || settings.defaultDepartureCity || 'Agadir');
         setDepartureCity(agentInitialDeparture);
+        setIsStudent(false);
+        setModificationMotif('');
 
         setItems([
           {
@@ -561,6 +615,10 @@ export const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
     try {
       setIsSubmitting(true);
 
+      // Save custom cities if newly typed
+      if (departureCity.trim()) saveCustomCity(departureCity.trim());
+      if (destinationCity.trim()) saveCustomCity(destinationCity.trim());
+
       let finalSeq = sequenceNumber;
       const digitsInTracking = trackingNumber.replace(/\D/g, '');
       if (digitsInTracking) {
@@ -570,6 +628,76 @@ export const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
         }
       }
 
+      const now = new Date();
+      const nowIso = now.toISOString();
+      const dateFormatted = now.toLocaleDateString('fr-FR') + ' à ' + now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+      let updatedHistory: VoucherModificationHistory[] = Array.isArray(initialVoucher?.history) ? [...initialVoucher.history] : [];
+
+      if (initialVoucher) {
+        const changesList: { field: string; oldValue?: any; newValue?: any }[] = [];
+        if (initialVoucher.sender?.name !== senderName.trim()) {
+          changesList.push({ field: 'Expéditeur (Nom)', oldValue: initialVoucher.sender?.name, newValue: senderName.trim() });
+        }
+        if (initialVoucher.sender?.phone !== senderPhone.trim()) {
+          changesList.push({ field: 'Expéditeur (Téléphone)', oldValue: initialVoucher.sender?.phone, newValue: senderPhone.trim() });
+        }
+        if (initialVoucher.recipient?.name !== recipientName.trim()) {
+          changesList.push({ field: 'Destinataire (Nom)', oldValue: initialVoucher.recipient?.name, newValue: recipientName.trim() });
+        }
+        if (initialVoucher.recipient?.phone !== recipientPhone.trim()) {
+          changesList.push({ field: 'Destinataire (Téléphone)', oldValue: initialVoucher.recipient?.phone, newValue: recipientPhone.trim() });
+        }
+        if ((initialVoucher.destinationCity || initialVoucher.recipient?.destination) !== destinationCity.trim()) {
+          changesList.push({ field: 'Destination', oldValue: initialVoucher.destinationCity || initialVoucher.recipient?.destination, newValue: destinationCity.trim() });
+        }
+        if (initialVoucher.departureCity !== (departureCity.trim() || settings.defaultDepartureCity)) {
+          changesList.push({ field: 'Départ', oldValue: initialVoucher.departureCity, newValue: departureCity.trim() || settings.defaultDepartureCity });
+        }
+        const prevIsStudent = Boolean(initialVoucher.isStudent || initialVoucher.recipient?.isStudent);
+        if (prevIsStudent !== isStudent) {
+          changesList.push({ field: 'Option Étudiant', oldValue: prevIsStudent ? 'Activée (Étudiant)' : 'Standard', newValue: isStudent ? 'Activée (Étudiant)' : 'Standard' });
+        }
+        if (initialVoucher.totalPrice !== finalPrice) {
+          changesList.push({ field: 'Prix total', oldValue: `${initialVoucher.totalPrice} DH`, newValue: `${finalPrice} DH` });
+        }
+        if (initialVoucher.totalWeightKg !== finalTotalWeightKg) {
+          changesList.push({ field: 'Poids total', oldValue: `${initialVoucher.totalWeightKg} kg`, newValue: `${finalTotalWeightKg} kg` });
+        }
+        if (initialVoucher.paymentStatus !== paymentStatus) {
+          changesList.push({ field: 'Statut de paiement', oldValue: initialVoucher.paymentStatus, newValue: paymentStatus });
+        }
+        if (initialVoucher.status !== status) {
+          changesList.push({ field: 'Statut du bon', oldValue: initialVoucher.status, newValue: status });
+        }
+        if ((initialVoucher.advanceAmount || 0) !== numericAdvance) {
+          changesList.push({ field: 'Montant avance', oldValue: `${initialVoucher.advanceAmount || 0} DH`, newValue: `${numericAdvance} DH` });
+        }
+
+        const newHistoryItem: VoucherModificationHistory = {
+          id: `hist-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+          timestamp: nowIso,
+          dateFormatted,
+          authorName: currentAgent?.name || 'Agent',
+          actionType: 'MODIFICATION',
+          title: changesList.length > 0 ? `Modification (${changesList.length} élément${changesList.length > 1 ? 's' : ''})` : 'Mise à jour des informations',
+          motif: modificationMotif.trim() || (changesList.length > 0 ? `Modification : ${changesList.map(c => c.field).join(', ')}` : 'Mise à jour des informations du bon'),
+          changes: changesList
+        };
+
+        updatedHistory.unshift(newHistoryItem);
+      } else {
+        updatedHistory = [{
+          id: `hist-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+          timestamp: nowIso,
+          dateFormatted,
+          authorName: currentAgent?.name || 'Agent',
+          actionType: 'CREATION',
+          title: 'Création initiale du bon',
+          motif: 'Enregistrement du bon de bagages / colis'
+        }];
+      }
+
       const voucherPayload: Partial<Voucher> = {
         date,
         time,
@@ -577,6 +705,8 @@ export const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
         sequenceNumber: finalSeq,
         departureCity: departureCity.trim() || settings.defaultDepartureCity || 'Casablanca',
         destinationCity: destinationCity.trim(),
+        isStudent,
+        history: updatedHistory,
         sender: {
           name: senderName.trim(),
           cin: senderCin.trim(),
@@ -587,7 +717,8 @@ export const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
           name: recipientName.trim(),
           destination: destinationCity.trim(),
           phone: recipientPhone.trim(),
-          address: recipientAddress.trim()
+          address: recipientAddress.trim(),
+          isStudent,
         },
         items: items.map(it => {
           const qty = Number(it.quantity) || 1;
@@ -680,6 +811,41 @@ export const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
             </div>
           )}
 
+          {/* Modification Reason / Motif Banner when in Edit Mode */}
+          {isEditing && (
+            <div className="bg-amber-500/10 border-2 border-amber-500/40 rounded-xl p-4 space-y-2.5 animate-fadeIn">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-black uppercase tracking-wider text-amber-900 dark:text-amber-300 flex items-center gap-1.5">
+                  <FileText className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                  <span>Motif / Raison de la modification (Archivé dans l'historique d'audit)</span>
+                </label>
+                <span className="text-[11px] font-bold text-amber-700 dark:text-amber-400">
+                  {new Date().toLocaleDateString('fr-FR')} à {new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
+              <input
+                type="text"
+                value={modificationMotif}
+                onChange={e => setModificationMotif(e.target.value)}
+                placeholder="Ex: Correction téléphone destinataire, Changement de destination, Application tarif étudiant, Ajustement poids..."
+                className="w-full px-3 py-2 bg-white dark:bg-slate-800 border-2 border-amber-300 dark:border-amber-700 rounded-lg text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
+              />
+              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                <span className="text-[10px] text-amber-800 dark:text-amber-300 font-bold uppercase">Motifs rapides :</span>
+                {['Correction coordonnées', 'Changement destination', 'Ajustement poids/prix', 'Option étudiant', 'Colis supplémentaire', 'Règlement effectué'].map(chip => (
+                  <button
+                    key={chip}
+                    type="button"
+                    onClick={() => setModificationMotif(chip)}
+                    className="px-2 py-0.5 rounded text-[10px] font-bold bg-white dark:bg-slate-800 border border-amber-200 dark:border-amber-700 hover:bg-amber-100 text-amber-900 dark:text-amber-200 transition-colors cursor-pointer"
+                  >
+                    {chip}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Section 1: Top Tracking & Date Bar */}
           <div className="bg-orange-50/70 dark:bg-orange-950/20 border border-orange-200/80 dark:border-orange-900/40 rounded-xl p-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
             
@@ -760,17 +926,41 @@ export const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
 
             {/* Ville Départ */}
             <div>
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5 mb-1">
-                <MapPin className="w-3.5 h-3.5 text-slate-500" />
-                Agence / Ville de Départ
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center justify-between gap-1.5 mb-1">
+                <span className="flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-slate-500" />
+                  Agence / Ville de Départ
+                </span>
+                <span className="text-[10px] font-normal text-slate-400">Choix ou saisie libre</span>
               </label>
               <input
                 type="text"
+                list="all-available-cities"
                 value={departureCity}
                 onChange={e => setDepartureCity(e.target.value)}
-                placeholder="Ex: Casablanca"
+                onBlur={e => {
+                  if (e.target.value.trim()) saveCustomCity(e.target.value.trim());
+                }}
+                placeholder="Ex: Casablanca, Agadir, Paris..."
                 className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 font-medium"
               />
+              {/* Quick suggestion pills */}
+              <div className="flex flex-wrap items-center gap-1 mt-1.5 max-h-12 overflow-hidden">
+                {allAvailableCities.slice(0, 6).map(city => (
+                  <button
+                    key={`dep-${city}`}
+                    type="button"
+                    onClick={() => setDepartureCity(city)}
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold border transition-colors cursor-pointer ${
+                      departureCity.toLowerCase() === city.toLowerCase()
+                        ? 'bg-orange-500 text-white border-orange-500'
+                        : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-orange-400'
+                    }`}
+                  >
+                    {city}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -918,17 +1108,37 @@ export const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
                     <input
                       type="text"
                       required
-                      list="agencies-list"
+                      list="all-available-cities"
                       value={destinationCity}
                       onChange={e => setDestinationCity(e.target.value)}
-                      placeholder="Ex: Paris, Bruxelles..."
+                      onBlur={e => {
+                        if (e.target.value.trim()) saveCustomCity(e.target.value.trim());
+                      }}
+                      placeholder="Ex: Paris, Bruxelles, Casablanca..."
                       className="w-full pl-9 pr-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 font-medium"
                     />
-                    <datalist id="agencies-list">
-                      {settings.defaultAgencies?.map(ag => (
-                        <option key={ag} value={ag} />
+                    <datalist id="all-available-cities">
+                      {allAvailableCities.map(c => (
+                        <option key={c} value={c} />
                       ))}
                     </datalist>
+                  </div>
+                  {/* Quick suggestion pills for destination */}
+                  <div className="flex flex-wrap items-center gap-1 mt-1.5 max-h-12 overflow-hidden">
+                    {allAvailableCities.slice(0, 6).map(city => (
+                      <button
+                        key={`dest-${city}`}
+                        type="button"
+                        onClick={() => setDestinationCity(city)}
+                        className={`px-1.5 py-0.5 rounded text-[10px] font-bold border transition-colors cursor-pointer ${
+                          destinationCity.toLowerCase() === city.toLowerCase()
+                            ? 'bg-orange-500 text-white border-orange-500'
+                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-orange-400'
+                        }`}
+                      >
+                        {city}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
@@ -964,6 +1174,54 @@ export const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
                     placeholder="Ex: Agence Gare ou Adresse à domicile"
                     className="w-full pl-9 pr-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-orange-500"
                   />
+                </div>
+              </div>
+
+              {/* OPTION ÉTUDIANT (Destinataire Étudiant) */}
+              <div className={`p-3.5 rounded-xl border-2 transition-all duration-200 ${
+                isStudent 
+                  ? 'bg-gradient-to-r from-purple-900/30 via-indigo-900/20 to-purple-900/40 border-purple-500/80 shadow-md ring-2 ring-purple-500/30' 
+                  : 'bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 hover:border-slate-300'
+              }`}>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-start sm:items-center gap-3">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors shadow-sm ${
+                      isStudent 
+                        ? 'bg-gradient-to-tr from-purple-600 via-indigo-600 to-violet-500 text-white shadow-purple-500/30' 
+                        : 'bg-slate-100 dark:bg-slate-700 text-slate-400'
+                    }`}>
+                      <GraduationCap className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs font-black uppercase tracking-wider ${
+                          isStudent ? 'text-purple-900 dark:text-purple-200' : 'text-slate-800 dark:text-slate-200'
+                        }`}>
+                          Option Destinataire Étudiant 🎓
+                        </span>
+                        {isStudent && (
+                          <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-xs">
+                            Actif
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        Badge étudiant violet visible sur le site, les filtres, le reçu et la facture
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsStudent(!isStudent)}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer self-start sm:self-auto shrink-0 ${
+                      isStudent
+                        ? 'bg-purple-600 hover:bg-purple-700 text-white shadow-sm ring-2 ring-purple-400/40'
+                        : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600'
+                    }`}
+                  >
+                    {isStudent ? '✓ Étudiant Sélectionné' : '+ Activer Option Étudiant'}
+                  </button>
                 </div>
               </div>
             </div>
@@ -1996,25 +2254,25 @@ export const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
         </form>
 
         {/* Modal Footer with Actions */}
-        <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-3 sticky bottom-0 z-20">
+        <div className="px-3.5 sm:px-6 py-3 sm:py-4 bg-slate-50 dark:bg-slate-800/95 border-t border-slate-200 dark:border-slate-700 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-3 sticky bottom-0 z-20">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 text-sm font-semibold transition-colors"
+            className="w-full sm:w-auto px-4 py-2 sm:py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 text-xs sm:text-sm font-semibold transition-colors text-center"
           >
             Annuler
           </button>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 flex-1 sm:flex-initial sm:justify-end">
             {/* Save & Print directly */}
             <button
               type="button"
               disabled={isSubmitting}
               onClick={() => handleFormSubmit(undefined, 'print')}
-              className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-sm flex items-center gap-2 transition-all"
+              className="px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-xs"
             >
-              <Printer className="w-4 h-4 text-orange-400" />
-              <span>Enregistrer & Imprimer</span>
+              <Printer className="w-4 h-4 text-orange-400 shrink-0" />
+              <span className="truncate">Enregistrer & Imprimer</span>
             </button>
 
             {/* Save & Share */}
@@ -2022,10 +2280,10 @@ export const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
               type="button"
               disabled={isSubmitting}
               onClick={() => handleFormSubmit(undefined, 'share')}
-              className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm flex items-center gap-2 transition-all"
+              className="px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-xs"
             >
-              <Share2 className="w-4 h-4" />
-              <span>Enregistrer & Partager</span>
+              <Share2 className="w-4 h-4 shrink-0" />
+              <span className="truncate">Enregistrer & Partager</span>
             </button>
 
             {/* Save Primary */}
@@ -2033,10 +2291,10 @@ export const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
               type="button"
               disabled={isSubmitting}
               onClick={() => handleFormSubmit()}
-              className="px-5 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-sm flex items-center gap-2 transition-all cursor-pointer"
+              className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
             >
-              <Save className="w-4 h-4" />
-              <span>{isSubmitting ? 'Enregistrement...' : 'Enregistrer le Bon'}</span>
+              <Save className="w-4 h-4 shrink-0" />
+              <span className="truncate">{isSubmitting ? 'Enregistrement...' : 'Enregistrer le Bon'}</span>
             </button>
           </div>
         </div>

@@ -32,9 +32,12 @@ import {
   ShieldAlert,
   Lock,
   AlertTriangle,
-  CloudUpload
+  CloudUpload,
+  GraduationCap,
+  Coins,
+  X
 } from 'lucide-react';
-import { CompanySettings, Voucher, VoucherStatus, AgentProfile, VoucherSortOption } from '../types';
+import { CompanySettings, Voucher, VoucherStatus, AgentProfile, VoucherSortOption, PaymentStatus } from '../types';
 import { formatCurrency, formatDate, getPaymentMethodLabel, getPaymentStatusInfo, getStatusBadge } from '../utils/formatters';
 import { ConfirmModal } from './ConfirmModal';
 import { VoucherPhotoViewerModal } from './VoucherPhotoViewerModal';
@@ -48,6 +51,8 @@ interface VouchersListProps {
   setStatusFilter: (status: string) => void;
   destinationFilter: string;
   setDestinationFilter: (dest: string) => void;
+  studentFilter?: string;
+  setStudentFilter?: (filter: string) => void;
   sortBy?: VoucherSortOption;
   setSortBy?: (sort: VoucherSortOption) => void;
   selectedIds: string[];
@@ -60,6 +65,7 @@ interface VouchersListProps {
   onDeleteVoucher: (id: string) => void;
   onUpdateStatus: (id: string, newStatus: VoucherStatus) => void;
   onBatchUpdateStatus: (ids: string[], status: VoucherStatus) => void;
+  onBatchUpdatePaymentStatus?: (ids: string[], paymentStatus: PaymentStatus, advanceAmount?: number) => void;
   onBatchDelete: (ids: string[]) => void;
   onOpenExcelExport: () => void;
   onBatchShare?: (selectedVouchers: Voucher[]) => void;
@@ -78,6 +84,8 @@ export const VouchersList: React.FC<VouchersListProps> = ({
   setStatusFilter,
   destinationFilter,
   setDestinationFilter,
+  studentFilter,
+  setStudentFilter,
   sortBy,
   setSortBy,
   selectedIds,
@@ -90,6 +98,7 @@ export const VouchersList: React.FC<VouchersListProps> = ({
   onDeleteVoucher,
   onUpdateStatus,
   onBatchUpdateStatus,
+  onBatchUpdatePaymentStatus,
   onBatchDelete,
   onOpenExcelExport,
   onBatchShare,
@@ -102,6 +111,9 @@ export const VouchersList: React.FC<VouchersListProps> = ({
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id?: string; trackingNumber?: string; isBatch?: boolean; count?: number } | null>(null);
   const [selectedPhotoVoucher, setSelectedPhotoVoucher] = useState<Voucher | null>(null);
+  const [advanceModalOpen, setAdvanceModalOpen] = useState<boolean>(false);
+  const [advanceAmountInput, setAdvanceAmountInput] = useState<string>('');
+  const [restrictionToast, setRestrictionToast] = useState<string | null>(null);
 
   // Toggle selection
   const handleToggleSelectAll = () => {
@@ -182,16 +194,16 @@ export const VouchersList: React.FC<VouchersListProps> = ({
           </div>
 
           {/* Quick Filters & Sorting */}
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 max-w-full min-w-0">
             {/* Sort Selector */}
             {sortBy && setSortBy && (
-              <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl shadow-xs">
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl shadow-xs max-w-full min-w-0">
                 <ArrowUpDown className="w-3.5 h-3.5 text-orange-500 shrink-0" />
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 hidden sm:inline">Trier :</span>
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 hidden sm:inline shrink-0">Trier :</span>
                 <select
                   value={sortBy}
                   onChange={e => setSortBy(e.target.value as VoucherSortOption)}
-                  className="bg-transparent text-xs font-bold text-slate-800 dark:text-slate-100 focus:outline-none cursor-pointer"
+                  className="bg-transparent text-xs font-bold text-slate-800 dark:text-slate-100 focus:outline-none cursor-pointer max-w-full min-w-0 truncate"
                   title="Ordre de tri des bons"
                 >
                   <option value="NUMBER_DESC">N° Bon (11, 10, 9...)</option>
@@ -210,7 +222,7 @@ export const VouchersList: React.FC<VouchersListProps> = ({
             <select
               value={statusFilter}
               onChange={e => setStatusFilter(e.target.value)}
-              className="flex-1 sm:flex-initial px-3 py-2 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:border-orange-400 cursor-pointer"
+              className="flex-1 sm:flex-initial max-w-full min-w-0 truncate px-3 py-2 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:border-orange-400 cursor-pointer"
             >
               <option value="ALL">Tous les statuts</option>
               <option value="EN_ATTENTE">En attente</option>
@@ -224,13 +236,33 @@ export const VouchersList: React.FC<VouchersListProps> = ({
             <select
               value={destinationFilter}
               onChange={e => setDestinationFilter(e.target.value)}
-              className="flex-1 sm:flex-initial px-3 py-2 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:border-orange-400 cursor-pointer"
+              className="flex-1 sm:flex-initial max-w-full min-w-0 truncate px-3 py-2 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:border-orange-400 cursor-pointer"
             >
               <option value="ALL">Toutes destinations</option>
               {settings.defaultAgencies?.map(ag => (
                 <option key={ag} value={ag}>{ag}</option>
               ))}
             </select>
+
+            {/* Student Filter */}
+            {setStudentFilter && (
+              <select
+                value={studentFilter || 'ALL'}
+                onChange={e => setStudentFilter(e.target.value)}
+                className={`flex-1 sm:flex-initial max-w-full min-w-0 truncate px-3 py-2 border-2 rounded-xl text-xs font-bold focus:outline-none focus:border-purple-500 cursor-pointer transition-all ${
+                  studentFilter === 'STUDENT'
+                    ? 'bg-purple-600 text-white border-purple-700 shadow-xs'
+                    : studentFilter === 'STANDARD'
+                    ? 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-800 dark:text-slate-200'
+                    : 'bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-700 dark:text-slate-200'
+                }`}
+                title="Filtrer par profil étudiant"
+              >
+                <option value="ALL" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Tous profils (Étudiants & Standard)</option>
+                <option value="STUDENT" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">🎓 Étudiants uniquement</option>
+                <option value="STANDARD" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Standard (Non étudiant)</option>
+              </select>
+            )}
           </div>
         </div>
 
@@ -258,6 +290,43 @@ export const VouchersList: React.FC<VouchersListProps> = ({
                   </button>
                 ))}
               </div>
+
+              {/* Batch Change Payment Status Buttons */}
+              {onBatchUpdatePaymentStatus && (
+                <div className="flex flex-wrap items-center gap-1 pl-2 border-l border-orange-300 dark:border-orange-800">
+                  <span className="text-[10px] uppercase tracking-wider text-slate-600 dark:text-slate-300 font-bold flex items-center gap-1">
+                    <Coins className="w-3 h-3 text-orange-600" />
+                    Paiement :
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => onBatchUpdatePaymentStatus(selectedIds, 'PAYE')}
+                    className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-wider transition-colors cursor-pointer shadow-2xs"
+                    title="Marquer tous les bons sélectionnés comme PAYÉS (100%)"
+                  >
+                    ✓ Payé (100%)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onBatchUpdatePaymentStatus(selectedIds, 'NON_PAYE')}
+                    className="px-2.5 py-1 rounded bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-black uppercase tracking-wider transition-colors cursor-pointer shadow-2xs"
+                    title="Marquer tous les bons sélectionnés comme NON PAYÉS"
+                  >
+                    ✗ Non Payé
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAdvanceAmountInput('');
+                      setAdvanceModalOpen(true);
+                    }}
+                    className="px-2.5 py-1 rounded bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-[10px] uppercase tracking-wider transition-colors cursor-pointer shadow-2xs"
+                    title="Définir une avance reçue sur les bons sélectionnés"
+                  >
+                    ⏳ Avance...
+                  </button>
+                </div>
+              )}
 
               {/* Batch Direct Validate (Amine) */}
               {currentAgent?.name === 'Amine' && onBatchValidate && (
@@ -533,7 +602,14 @@ export const VouchersList: React.FC<VouchersListProps> = ({
                     </div>
 
                     <div className="p-1.5 sm:p-2 rounded-lg bg-slate-50/50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800 min-w-0 overflow-hidden">
-                      <span className="text-[8px] sm:text-[9px] font-black uppercase text-slate-400 block truncate">Destinataire</span>
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="text-[8px] sm:text-[9px] font-black uppercase text-slate-400 block truncate">Destinataire</span>
+                        {(v.isStudent || v.recipient?.isStudent) && (
+                          <span className="px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-gradient-to-r from-purple-600 via-indigo-600 to-violet-600 text-white shrink-0 shadow-2xs">
+                            🎓 Étudiant
+                          </span>
+                        )}
+                      </div>
                       <strong className="text-slate-900 dark:text-white truncate block font-bold text-[11px] sm:text-xs">{v.recipient.name}</strong>
                       <a 
                         href={`tel:${v.recipient.phone}`}
@@ -611,7 +687,8 @@ export const VouchersList: React.FC<VouchersListProps> = ({
                       type="button"
                       onClick={() => {
                         if (currentAgent && !currentAgent.canDelete) {
-                          alert("Action restreinte : Seul l'administrateur (Amine) a le droit de supprimer des bons.");
+                          setRestrictionToast("Action restreinte : Seul l'administrateur (Amine) a le droit de supprimer des bons.");
+                          setTimeout(() => setRestrictionToast(null), 3500);
                           return;
                         }
                         setDeleteTarget({ id: v.id, trackingNumber: v.trackingNumber });
@@ -807,26 +884,34 @@ export const VouchersList: React.FC<VouchersListProps> = ({
                       </td>
 
                       {/* Sender */}
-                      <td className="py-4 px-3" onClick={() => onOpenDetail(v)}>
-                        <div className="font-bold text-slate-900 dark:text-white">
+                      <td className="py-4 px-3 min-w-0" onClick={() => onOpenDetail(v)}>
+                        <div className="font-bold text-slate-900 dark:text-white truncate max-w-[150px] lg:max-w-[200px]" title={v.sender.name}>
                           {v.sender.name}
                         </div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5 font-mono">
-                          <span>{v.sender.phone}</span>
-                          {v.sender.cin && <span className="bg-slate-100 dark:bg-slate-800 px-1 rounded text-[10px] text-slate-600 dark:text-slate-300 font-bold">[{v.sender.cin}]</span>}
+                        <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5 font-mono truncate max-w-[150px] lg:max-w-[200px]">
+                          <span className="truncate">{v.sender.phone}</span>
+                          {v.sender.cin && <span className="bg-slate-100 dark:bg-slate-800 px-1 rounded text-[10px] text-slate-600 dark:text-slate-300 font-bold shrink-0">[{v.sender.cin}]</span>}
                         </div>
                       </td>
 
                       {/* Recipient & Route */}
-                      <td className="py-4 px-3" onClick={() => onOpenDetail(v)}>
-                        <div className="font-bold text-slate-900 dark:text-white">
-                          {v.recipient.name}
+                      <td className="py-4 px-3 min-w-0" onClick={() => onOpenDetail(v)}>
+                        <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                          <span className="font-bold text-slate-900 dark:text-white truncate max-w-[140px] lg:max-w-[180px]" title={v.recipient.name}>
+                            {v.recipient.name}
+                          </span>
+                          {(v.isStudent || v.recipient?.isStudent) && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-gradient-to-r from-purple-600 via-indigo-600 to-violet-600 text-white shadow-xs ring-1 ring-purple-300 dark:ring-purple-700 shrink-0">
+                              <GraduationCap className="w-3 h-3 text-yellow-300" />
+                              Étudiant
+                            </span>
+                          )}
                         </div>
-                        <div className="text-xs font-bold text-orange-600 dark:text-orange-400 flex items-center gap-1 mt-0.5">
+                        <div className="text-xs font-bold text-orange-600 dark:text-orange-400 flex items-center gap-1 mt-0.5 truncate max-w-[160px] lg:max-w-[220px]" title={`${v.departureCity || 'Casablanca'} ➔ ${v.recipient.destination}`}>
                           <MapPin className="w-3 h-3 shrink-0" />
-                          <span>{v.departureCity || 'Casablanca'} ➔ {v.recipient.destination}</span>
+                          <span className="truncate">{v.departureCity || 'Casablanca'} ➔ {v.recipient.destination}</span>
                         </div>
-                        <div className="text-[11px] text-slate-400 font-mono">{v.recipient.phone}</div>
+                        <div className="text-[11px] text-slate-400 font-mono truncate">{v.recipient.phone}</div>
                       </td>
 
                       {/* Colis & Weight */}
@@ -929,8 +1014,8 @@ export const VouchersList: React.FC<VouchersListProps> = ({
                       </td>
 
                       {/* Action Buttons */}
-                      <td className="py-4 px-4 text-right" onClick={e => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-1">
+                      <td className="py-4 px-4 text-right whitespace-nowrap" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1 flex-nowrap shrink-0 min-w-[170px]">
                           
                           {/* View Detail */}
                           <button
@@ -991,7 +1076,8 @@ export const VouchersList: React.FC<VouchersListProps> = ({
                             <button
                               type="button"
                               onClick={() => {
-                                alert("Action restreinte : Seul l'administrateur (Amine) est autorisé à supprimer des bons. Sofiane (Agent) ne peut pas supprimer.");
+                                setRestrictionToast("Action restreinte : Seul l'administrateur (Amine) est autorisé à supprimer des bons. Sofiane (Agent) ne peut pas supprimer.");
+                                setTimeout(() => setRestrictionToast(null), 4000);
                               }}
                               title="Suppression bloquée (Seul Amine peut supprimer)"
                               className="p-1.5 rounded-lg text-slate-300 dark:text-slate-600 hover:text-slate-400 transition-colors cursor-not-allowed"
@@ -1066,6 +1152,108 @@ export const VouchersList: React.FC<VouchersListProps> = ({
           voucher={selectedPhotoVoucher}
           initialTab={selectedPhotoVoucher.bonReelPhoto ? 'BON_REEL' : 'PARCEL_CASE'}
         />
+      )}
+
+      {/* Batch Advance Payment Modal */}
+      {advanceModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 animate-fadeIn">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-amber-500 text-slate-950 flex items-center justify-center font-bold">
+                  <Coins className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black uppercase text-slate-900 dark:text-white">
+                    Avance de Paiement Groupée
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Pour les {selectedIds.length} bon(s) sélectionnés
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAdvanceModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                Montant de l'avance reçue ({currency})
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  min="0"
+                  step="any"
+                  autoFocus
+                  value={advanceAmountInput}
+                  onChange={e => setAdvanceAmountInput(e.target.value)}
+                  placeholder="Ex: 50, 100, 200..."
+                  className="w-full pl-3 pr-12 py-2.5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-base font-mono font-bold focus:border-orange-500 focus:outline-none"
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      const parsed = parseFloat(advanceAmountInput);
+                      if (!isNaN(parsed) && parsed > 0 && onBatchUpdatePaymentStatus) {
+                        onBatchUpdatePaymentStatus(selectedIds, 'AVANCE', parsed);
+                        setAdvanceModalOpen(false);
+                      }
+                    }
+                  }}
+                />
+                <span className="absolute right-3.5 top-3 text-xs font-black text-slate-400 font-mono">
+                  {currency}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                Le reste à payer sera calculé automatiquement pour chaque bon sélectionné.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setAdvanceModalOpen(false)}
+                className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                disabled={!advanceAmountInput || parseFloat(advanceAmountInput) <= 0}
+                onClick={() => {
+                  const parsed = parseFloat(advanceAmountInput);
+                  if (!isNaN(parsed) && parsed > 0 && onBatchUpdatePaymentStatus) {
+                    onBatchUpdatePaymentStatus(selectedIds, 'AVANCE', parsed);
+                    setAdvanceModalOpen(false);
+                  }
+                }}
+                className="px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-black uppercase tracking-wider shadow-sm cursor-pointer"
+              >
+                Appliquer l'Avance
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Restriction Toast Notification */}
+      {restrictionToast && (
+        <div className="fixed bottom-6 right-6 z-50 p-4 bg-rose-600 text-white rounded-2xl shadow-2xl flex items-center gap-3 animate-slideUp text-xs font-bold max-w-md border border-rose-400">
+          <Lock className="w-5 h-5 shrink-0" />
+          <div className="flex-1">{restrictionToast}</div>
+          <button
+            type="button"
+            onClick={() => setRestrictionToast(null)}
+            className="p-1 rounded-lg hover:bg-white/20 text-white"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
       )}
     </div>
   );

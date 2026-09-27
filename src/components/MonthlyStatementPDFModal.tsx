@@ -162,7 +162,9 @@ export const MonthlyStatementPDFModal: React.FC<MonthlyStatementPDFModalProps> =
   const handleShareWhatsApp = () => {
     const text = buildMonthlyWhatsAppSummary(stats, settings);
     const encoded = encodeURIComponent(text);
-    window.open(`https://api.whatsapp.com/send?text=${encoded}`, '_blank');
+    try {
+      window.open(`https://api.whatsapp.com/send?text=${encoded}`, '_blank', 'noopener,noreferrer');
+    } catch {}
   };
 
   return (
@@ -356,76 +358,76 @@ export const MonthlyStatementPDFModal: React.FC<MonthlyStatementPDFModalProps> =
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
                 
                 {/* Box 1: Total Facturé Client */}
-                <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-1">
-                  <span className="text-[10px] uppercase font-black text-slate-500 tracking-wider block">
+                <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-1 min-w-0 overflow-hidden">
+                  <span className="text-[10px] uppercase font-black text-slate-500 tracking-wider block truncate">
                     Gains Bruts Facturés (CA)
                   </span>
-                  <span className="text-xl sm:text-2xl font-black font-mono text-slate-900 block">
+                  <span className="text-lg sm:text-xl lg:text-2xl font-black font-mono text-slate-900 block truncate" title={formatCurrency(stats.totalClientRevenue, currency)}>
                     {formatCurrency(stats.totalClientRevenue, currency)}
                   </span>
-                  <span className="text-[10px] font-bold text-slate-500 block">
+                  <span className="text-[10px] font-bold text-slate-500 block truncate">
                     {stats.totalVouchers} expéditions clients
                   </span>
                 </div>
 
                 {/* Box 2: Dépenses Sous-Traitance Externes */}
-                <div className="p-3.5 bg-amber-50/80 border border-amber-200 rounded-2xl space-y-1">
-                  <span className="text-[10px] uppercase font-black text-amber-800 tracking-wider block">
+                <div className="p-3.5 bg-amber-50/80 border border-amber-200 rounded-2xl space-y-1 min-w-0 overflow-hidden">
+                  <span className="text-[10px] uppercase font-black text-amber-800 tracking-wider block truncate">
                     Coût Transporteurs Externes
                   </span>
-                  <span className="text-xl sm:text-2xl font-black font-mono text-amber-700 block">
+                  <span className="text-lg sm:text-xl lg:text-2xl font-black font-mono text-amber-700 block truncate" title={`-${formatCurrency(stats.totalExternalCost, currency)}`}>
                     -{formatCurrency(stats.totalExternalCost, currency)}
                   </span>
-                  <span className="text-[10px] font-bold text-amber-800 block">
+                  <span className="text-[10px] font-bold text-amber-800 block truncate">
                     {stats.externalVouchersCount} bons sous-traités
                   </span>
                 </div>
 
                 {/* Box 3: Bénéfice Net Dégagé */}
-                <div className="p-3.5 bg-slate-900 text-white rounded-2xl shadow-md space-y-1">
-                  <span className="text-[10px] uppercase font-black text-orange-400 tracking-wider block">
+                <div className="p-3.5 bg-slate-900 text-white rounded-2xl shadow-md space-y-1 min-w-0 overflow-hidden">
+                  <span className="text-[10px] uppercase font-black text-orange-400 tracking-wider block truncate">
                     Bénéfice Net Dégagé
                   </span>
-                  <span className="text-xl sm:text-2xl font-black font-mono text-white block">
+                  <span className="text-lg sm:text-xl lg:text-2xl font-black font-mono text-white block truncate" title={`+${formatCurrency(stats.netMargin, currency)}`}>
                     +{formatCurrency(stats.netMargin, currency)}
                   </span>
-                  <span className="text-[10px] font-bold text-emerald-400 block">
+                  <span className="text-[10px] font-bold text-emerald-400 block truncate">
                     Taux de Marge : {stats.profitMarginPercent}%
                   </span>
                 </div>
 
                 {/* Box 4: Encaissé Réel vs Créances */}
-                <div className="p-3.5 bg-emerald-50/80 border border-emerald-200 rounded-2xl space-y-1">
-                  <span className="text-[10px] uppercase font-black text-emerald-800 tracking-wider block">
+                <div className="p-3.5 bg-emerald-50/80 border border-emerald-200 rounded-2xl space-y-1 min-w-0 overflow-hidden">
+                  <span className="text-[10px] uppercase font-black text-emerald-800 tracking-wider block truncate">
                     Encaissé au Départ
                   </span>
-                  <span className="text-xl sm:text-2xl font-black font-mono text-emerald-700 block">
+                  <span className="text-lg sm:text-xl lg:text-2xl font-black font-mono text-emerald-700 block truncate" title={formatCurrency(stats.totalCollected, currency)}>
                     {formatCurrency(stats.totalCollected, currency)}
                   </span>
-                  <span className="text-[10px] font-bold text-emerald-800 block">
+                  <span className="text-[10px] font-bold text-emerald-800 block truncate">
                     {stats.collectionRatePercent}% du CA perçu
                   </span>
                 </div>
               </div>
 
               {/* Secondary Balance Line: Receivables and Debts */}
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between">
-                  <span className="font-bold text-rose-800 flex items-center gap-1">
-                    <Clock className="w-3.5 h-3.5 text-rose-600" />
-                    <span>Créances Clients Restantes (À percevoir à la livraison) :</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-xl flex flex-wrap items-center justify-between gap-1 min-w-0">
+                  <span className="font-bold text-rose-800 flex items-center gap-1 min-w-0">
+                    <Clock className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                    <span className="truncate">Créances Clients (À percevoir) :</span>
                   </span>
-                  <strong className="font-mono font-black text-rose-700 text-sm">
+                  <strong className="font-mono font-black text-rose-700 text-sm whitespace-nowrap">
                     {formatCurrency(stats.totalReceivables, currency)}
                   </strong>
                 </div>
 
-                <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between">
-                  <span className="font-bold text-amber-800 flex items-center gap-1">
-                    <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
-                    <span>Dettes Transporteurs Restantes (À régler) :</span>
+                <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl flex flex-wrap items-center justify-between gap-1 min-w-0">
+                  <span className="font-bold text-amber-800 flex items-center gap-1 min-w-0">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                    <span className="truncate">Dettes Transporteurs (À régler) :</span>
                   </span>
-                  <strong className="font-mono font-black text-amber-800 text-sm">
+                  <strong className="font-mono font-black text-amber-800 text-sm whitespace-nowrap">
                     {formatCurrency(stats.externalCostUnpaid, currency)}
                   </strong>
                 </div>

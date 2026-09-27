@@ -340,8 +340,10 @@ export const supabaseApi = {
           name: row.recipient_name,
           destination: row.recipient_destination,
           phone: row.recipient_phone,
-          address: row.recipient_address || ''
+          address: row.recipient_address || '',
+          isStudent: Boolean(row.is_student)
         },
+        isStudent: Boolean(row.is_student),
         departureCity: row.departure_city,
         destinationCity: row.destination_city,
         items: row.items || [],
@@ -369,7 +371,8 @@ export const supabaseApi = {
         externalCarrierVoucherRef: row.external_carrier_voucher_ref,
         externalCost: row.external_cost,
         externalPaymentStatus: row.external_payment_status,
-        externalNotes: row.external_notes
+        externalNotes: row.external_notes,
+        history: row.history || []
       }));
     } catch {
       return null;
@@ -423,7 +426,9 @@ export const supabaseApi = {
         external_carrier_voucher_ref: v.externalCarrierVoucherRef || '',
         external_cost: v.externalCost || 0,
         external_payment_status: v.externalPaymentStatus || 'PAID',
-        external_notes: v.externalNotes || ''
+        external_notes: v.externalNotes || '',
+        is_student: Boolean(v.isStudent || v.recipient?.isStudent),
+        history: v.history || []
       };
 
       const { error } = await client.from('vouchers').upsert(row);

@@ -50,10 +50,10 @@ export const TrackingLookup: React.FC<TrackingLookupProps> = ({
     }
 
     const found = vouchers.find(v =>
-      v.trackingNumber.toLowerCase() === term ||
-      v.sender.phone.includes(term) ||
-      v.recipient.phone.includes(term) ||
-      v.sender.cin?.toLowerCase() === term ||
+      (v.trackingNumber || '').toLowerCase() === term ||
+      (v.sender?.phone || '').includes(term) ||
+      (v.recipient?.phone || '').includes(term) ||
+      (v.sender?.cin || '').toLowerCase() === term ||
       v.id === term
     );
 
@@ -108,7 +108,7 @@ export const TrackingLookup: React.FC<TrackingLookupProps> = ({
             Suivi Rapide Loyalis <span className="text-orange-500">Trans</span>
           </h2>
           <p className="text-xs sm:text-sm text-slate-300 font-medium">
-            Saisissez le code de suivi à 7 chiffres (ex: <strong className="text-orange-400 font-mono font-bold">#0000001</strong>) ou le numéro de téléphone
+            Saisissez le numéro de votre bon (ex: <strong className="text-orange-400 font-mono font-bold">00000</strong>) ou votre numéro de téléphone
           </p>
 
           <form onSubmit={e => { e.preventDefault(); handleSearch(); }} className="pt-2">
@@ -331,7 +331,7 @@ export const TrackingLookup: React.FC<TrackingLookupProps> = ({
           </div>
           <h3 className="text-lg font-bold text-slate-900 dark:text-white">Aucun bon trouvé</h3>
           <p className="text-xs text-slate-500 max-w-sm mx-auto">
-            Vérifiez l'orthographe du numéro de suivi (ex: 0000001) ou recherchez avec le numéro de téléphone.
+            Vérifiez l'orthographe du numéro de bon (ex: 00000) ou recherchez avec votre numéro de téléphone.
           </p>
         </div>
       ) : null}

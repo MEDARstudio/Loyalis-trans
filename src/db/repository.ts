@@ -1,7 +1,7 @@
 import { db, createPool, isDatabaseConfigured, getConnectionString } from './index.ts';
 import { settingsTable, vouchersTable, users } from './schema.ts';
 import { eq, desc, and, gte, lte, or, ilike, inArray } from 'drizzle-orm';
-import { CompanySettings, Voucher, VoucherStats } from '../types.ts';
+import { CompanySettings, Voucher, VoucherStats, VoucherModificationHistory } from '../types.ts';
 
 const DEFAULT_SETTINGS: CompanySettings = {
   companyName: 'Loyalis Trans',
@@ -166,7 +166,9 @@ export async function ensureDatabaseColumns(): Promise<void> {
         external_carrier_voucher_ref TEXT,
         external_cost DOUBLE PRECISION DEFAULT 0,
         external_payment_status TEXT DEFAULT 'PAID',
-        external_notes TEXT
+        external_notes TEXT,
+        is_student BOOLEAN DEFAULT FALSE,
+        history JSONB DEFAULT '[]'::jsonb
       );
 
       CREATE INDEX IF NOT EXISTS idx_vouchers_tracking ON vouchers(tracking_number);
@@ -187,6 +189,8 @@ export async function ensureDatabaseColumns(): Promise<void> {
       ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS validated_by TEXT;
       ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS validated_at TIMESTAMP;
       ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS validation_notes TEXT;
+      ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS is_student BOOLEAN DEFAULT FALSE;
+      ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS history JSONB DEFAULT '[]'::jsonb;
     `);
   } catch (err: any) {
     console.warn('[Database Setup Info]:', err?.message || err);
@@ -314,7 +318,9 @@ function mapRowToVoucher(row: typeof vouchersTable.$inferSelect): Voucher {
       destination: row.recipientDestination,
       phone: row.recipientPhone,
       address: row.recipientAddress || '',
+      isStudent: Boolean((row as any).isStudent),
     },
+    isStudent: Boolean((row as any).isStudent),
     departureCity: row.departureCity,
     destinationCity: row.destinationCity,
     items: (row.items as any) || [],
@@ -343,6 +349,7 @@ function mapRowToVoucher(row: typeof vouchersTable.$inferSelect): Voucher {
     externalCost: row.externalCost ?? 0,
     externalPaymentStatus: (row.externalPaymentStatus as any) || 'PAID',
     externalNotes: row.externalNotes || '',
+    history: (row as any).history || [],
   };
 }
 
@@ -370,14 +377,14 @@ export async function getVouchers(filters?: {
   if (filters?.search) {
     const q = filters.search.toLowerCase().trim();
     vouchers = vouchers.filter(v =>
-      v.trackingNumber.toLowerCase().includes(q) ||
-      v.sender.name.toLowerCase().includes(q) ||
-      v.sender.cin.toLowerCase().includes(q) ||
-      v.sender.phone.toLowerCase().includes(q) ||
-      v.recipient.name.toLowerCase().includes(q) ||
-      v.recipient.destination.toLowerCase().includes(q) ||
-      v.recipient.phone.toLowerCase().includes(q) ||
-      v.items.some(it => it.nature.toLowerCase().includes(q))
+      (v.trackingNumber || '').toLowerCase().includes(q) ||
+      (v.sender?.name || '').toLowerCase().includes(q) ||
+      (v.sender?.cin || '').toLowerCase().includes(q) ||
+      (v.sender?.phone || '').toLowerCase().includes(q) ||
+      (v.recipient?.name || '').toLowerCase().includes(q) ||
+      (v.recipient?.destination || '').toLowerCase().includes(q) ||
+      (v.recipient?.phone || '').toLowerCase().includes(q) ||
+      (v.items || []).some(it => (it?.nature || '').toLowerCase().includes(q))
     );
   }
 
@@ -387,8 +394,8 @@ export async function getVouchers(filters?: {
 
   if (filters?.destination && filters.destination !== 'ALL') {
     vouchers = vouchers.filter(v =>
-      v.destinationCity.toLowerCase() === filters.destination!.toLowerCase() ||
-      v.recipient.destination.toLowerCase().includes(filters.destination!.toLowerCase())
+      (v.destinationCity || '').toLowerCase() === filters.destination!.toLowerCase() ||
+      (v.recipient?.destination || '').toLowerCase().includes(filters.destination!.toLowerCase())
     );
   }
 
@@ -496,108 +503,126 @@ export async function createVoucher(payload: any): Promise<{ voucher: Voucher; n
     notes: it.notes || ''
   }));
 
-  const newVoucher: Voucher = {
-    id,
-    trackingNumber: String(finalTrackingNumber).trim(),
-    sequenceNumber,
-    date: payload.date || now.toISOString().split('T')[0],
-    time: payload.time || now.toTimeString().substring(0, 5),
-    createdAt: now.toISOString(),
-    updatedAt: now.toISOString(),
-    sender: {
-      name: payload.sender?.name || '',
-      cin: payload.sender?.cin || '',
-      phone: payload.sender?.phone || '',
-      address: payload.sender?.address || '',
-    },
-    recipient: {
-      name: payload.recipient?.name || '',
-      destination: payload.recipient?.destination || '',
-      phone: payload.recipient?.phone || '',
-      address: payload.recipient?.address || '',
-    },
-    departureCity: payload.departureCity || settings.defaultDepartureCity || 'Casablanca',
-    destinationCity: payload.destinationCity || payload.recipient?.destination || '',
-    items: sanitizedItems,
-    totalColis: totalColis || 1,
-    totalWeightKg: Math.round(totalWeightKg * 100) / 100,
-    totalPrice: Math.round(totalPrice * 100) / 100,
-    paymentStatus: finalPaymentStatus,
-    advanceAmount: advance,
-    remainingAmount: remaining,
-    paymentMethod: payload.paymentMethod || finalPaymentStatus,
-    status: payload.status || 'EN_ATTENTE',
-    notes: payload.notes || '',
-    agencyName: payload.agencyName || settings.address,
-    agentName: payload.agentName || 'Agent Loyalis Trans',
-    createdByAgent: payload.createdByAgent || payload.agentName || 'Sofiane',
-    isValidated: payload.isValidated !== undefined 
-      ? (Boolean(payload.isValidated) || String(payload.createdByAgent || '').toLowerCase().includes('amine'))
-      : String(payload.createdByAgent || '').toLowerCase().includes('amine'),
-    validatedBy: payload.validatedBy || (String(payload.createdByAgent || '').toLowerCase().includes('amine') ? 'Amine' : undefined),
-    validatedAt: payload.validatedAt ? payload.validatedAt : (String(payload.createdByAgent || '').toLowerCase().includes('amine') ? now.toISOString() : undefined),
-    validationNotes: payload.validationNotes || (String(payload.createdByAgent || '').toLowerCase().includes('amine') ? 'Validé automatiquement (Créé par l\'administrateur)' : ''),
-    bonReelPhoto: payload.bonReelPhoto || null,
-    casePhotos: payload.casePhotos || [],
-    isExternalTransport: Boolean(payload.isExternalTransport),
-    externalCarrierName: payload.externalCarrierName || '',
-    externalCarrierPhone: payload.externalCarrierPhone || '',
-    externalCarrierVoucherRef: payload.externalCarrierVoucherRef || '',
-    externalCost: Number(payload.externalCost) || 0,
-    externalPaymentStatus: payload.externalPaymentStatus || 'PAID',
-    externalNotes: payload.externalNotes || '',
-  };
+    const isStudent = Boolean(payload.isStudent || payload.recipient?.isStudent);
+    const initialHistory: VoucherModificationHistory[] = Array.isArray(payload.history) && payload.history.length > 0
+      ? payload.history
+      : [{
+          id: `hist-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+          timestamp: now.toISOString(),
+          dateFormatted: now.toLocaleDateString('fr-FR') + ' à ' + now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+          authorName: payload.createdByAgent || payload.agentName || 'Agent',
+          actionType: 'CREATION',
+          title: 'Création initiale du bon',
+          motif: 'Enregistrement du bon de bagages / colis'
+        }];
 
-  // Update memory store
-  memoryVouchers = [newVoucher, ...memoryVouchers.filter(v => v.id !== id)];
+    const newVoucher: Voucher = {
+      id,
+      trackingNumber: String(finalTrackingNumber).trim(),
+      sequenceNumber,
+      date: payload.date || now.toISOString().split('T')[0],
+      time: payload.time || now.toTimeString().substring(0, 5),
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+      sender: {
+        name: payload.sender?.name || '',
+        cin: payload.sender?.cin || '',
+        phone: payload.sender?.phone || '',
+        address: payload.sender?.address || '',
+      },
+      recipient: {
+        name: payload.recipient?.name || '',
+        destination: payload.recipient?.destination || '',
+        phone: payload.recipient?.phone || '',
+        address: payload.recipient?.address || '',
+        isStudent,
+      },
+      isStudent,
+      departureCity: payload.departureCity || settings.defaultDepartureCity || 'Casablanca',
+      destinationCity: payload.destinationCity || payload.recipient?.destination || '',
+      items: sanitizedItems,
+      totalColis: totalColis || 1,
+      totalWeightKg: Math.round(totalWeightKg * 100) / 100,
+      totalPrice: Math.round(totalPrice * 100) / 100,
+      paymentStatus: finalPaymentStatus,
+      advanceAmount: advance,
+      remainingAmount: remaining,
+      paymentMethod: payload.paymentMethod || finalPaymentStatus,
+      status: payload.status || 'EN_ATTENTE',
+      notes: payload.notes || '',
+      agencyName: payload.agencyName || settings.address,
+      agentName: payload.agentName || 'Agent Loyalis Trans',
+      createdByAgent: payload.createdByAgent || payload.agentName || 'Sofiane',
+      isValidated: payload.isValidated !== undefined 
+        ? (Boolean(payload.isValidated) || String(payload.createdByAgent || '').toLowerCase().includes('amine'))
+        : String(payload.createdByAgent || '').toLowerCase().includes('amine'),
+      validatedBy: payload.validatedBy || (String(payload.createdByAgent || '').toLowerCase().includes('amine') ? 'Amine' : undefined),
+      validatedAt: payload.validatedAt ? payload.validatedAt : (String(payload.createdByAgent || '').toLowerCase().includes('amine') ? now.toISOString() : undefined),
+      validationNotes: payload.validationNotes || (String(payload.createdByAgent || '').toLowerCase().includes('amine') ? 'Validé automatiquement (Créé par l\'administrateur)' : ''),
+      bonReelPhoto: payload.bonReelPhoto || null,
+      casePhotos: payload.casePhotos || [],
+      isExternalTransport: Boolean(payload.isExternalTransport),
+      externalCarrierName: payload.externalCarrierName || '',
+      externalCarrierPhone: payload.externalCarrierPhone || '',
+      externalCarrierVoucherRef: payload.externalCarrierVoucherRef || '',
+      externalCost: Number(payload.externalCost) || 0,
+      externalPaymentStatus: payload.externalPaymentStatus || 'PAID',
+      externalNotes: payload.externalNotes || '',
+      history: initialHistory,
+    };
 
-  if (db && isDatabaseConfigured()) {
-    try {
-      await db.insert(vouchersTable).values({
-        id,
-        trackingNumber: String(finalTrackingNumber).trim(),
-        sequenceNumber,
-        date: newVoucher.date,
-        time: newVoucher.time,
-        createdAt: now,
-        updatedAt: now,
-        senderName: newVoucher.sender.name,
-        senderCin: newVoucher.sender.cin,
-        senderPhone: newVoucher.sender.phone,
-        senderAddress: newVoucher.sender.address,
-        recipientName: newVoucher.recipient.name,
-        recipientDestination: newVoucher.recipient.destination,
-        recipientPhone: newVoucher.recipient.phone,
-        recipientAddress: newVoucher.recipient.address,
-        departureCity: newVoucher.departureCity,
-        destinationCity: newVoucher.destinationCity,
-        items: sanitizedItems,
-        totalColis: newVoucher.totalColis,
-        totalWeightKg: newVoucher.totalWeightKg,
-        totalPrice: newVoucher.totalPrice,
-        paymentStatus: finalPaymentStatus,
-        advanceAmount: advance,
-        remainingAmount: remaining,
-        paymentMethod: newVoucher.paymentMethod,
-        status: newVoucher.status,
-        notes: newVoucher.notes,
-        agencyName: newVoucher.agencyName,
-        agentName: newVoucher.agentName,
-        createdByAgent: newVoucher.createdByAgent,
-        isValidated: newVoucher.isValidated,
-        validatedBy: newVoucher.validatedBy || null,
-        validatedAt: newVoucher.validatedAt ? new Date(newVoucher.validatedAt) : null,
-        validationNotes: newVoucher.validationNotes,
-        bonReelPhoto: newVoucher.bonReelPhoto,
-        casePhotos: newVoucher.casePhotos,
-        isExternalTransport: newVoucher.isExternalTransport,
-        externalCarrierName: newVoucher.externalCarrierName,
-        externalCarrierPhone: newVoucher.externalCarrierPhone,
-        externalCarrierVoucherRef: newVoucher.externalCarrierVoucherRef,
-        externalCost: newVoucher.externalCost,
-        externalPaymentStatus: newVoucher.externalPaymentStatus,
-        externalNotes: newVoucher.externalNotes,
-      });
+    // Update memory store
+    memoryVouchers = [newVoucher, ...memoryVouchers.filter(v => v.id !== id)];
+
+    if (db && isDatabaseConfigured()) {
+      try {
+        await db.insert(vouchersTable).values({
+          id,
+          trackingNumber: String(finalTrackingNumber).trim(),
+          sequenceNumber,
+          date: newVoucher.date,
+          time: newVoucher.time,
+          createdAt: now,
+          updatedAt: now,
+          senderName: newVoucher.sender.name,
+          senderCin: newVoucher.sender.cin,
+          senderPhone: newVoucher.sender.phone,
+          senderAddress: newVoucher.sender.address,
+          recipientName: newVoucher.recipient.name,
+          recipientDestination: newVoucher.recipient.destination,
+          recipientPhone: newVoucher.recipient.phone,
+          recipientAddress: newVoucher.recipient.address,
+          departureCity: newVoucher.departureCity,
+          destinationCity: newVoucher.destinationCity,
+          items: sanitizedItems,
+          totalColis: newVoucher.totalColis,
+          totalWeightKg: newVoucher.totalWeightKg,
+          totalPrice: newVoucher.totalPrice,
+          paymentStatus: finalPaymentStatus,
+          advanceAmount: advance,
+          remainingAmount: remaining,
+          paymentMethod: newVoucher.paymentMethod,
+          status: newVoucher.status,
+          notes: newVoucher.notes,
+          agencyName: newVoucher.agencyName,
+          agentName: newVoucher.agentName,
+          createdByAgent: newVoucher.createdByAgent,
+          isValidated: newVoucher.isValidated,
+          validatedBy: newVoucher.validatedBy || null,
+          validatedAt: newVoucher.validatedAt ? new Date(newVoucher.validatedAt) : null,
+          validationNotes: newVoucher.validationNotes,
+          bonReelPhoto: newVoucher.bonReelPhoto,
+          casePhotos: newVoucher.casePhotos,
+          isExternalTransport: newVoucher.isExternalTransport,
+          externalCarrierName: newVoucher.externalCarrierName,
+          externalCarrierPhone: newVoucher.externalCarrierPhone,
+          externalCarrierVoucherRef: newVoucher.externalCarrierVoucherRef,
+          externalCost: newVoucher.externalCost,
+          externalPaymentStatus: newVoucher.externalPaymentStatus,
+          externalNotes: newVoucher.externalNotes,
+          isStudent,
+          history: initialHistory,
+        });
     } catch (error) {
       // Memory store handles it
     }
@@ -698,8 +723,10 @@ export async function updateVoucher(idOrTracking: string, payload: any): Promise
     },
     recipient: {
       ...existing.recipient,
-      ...(payload.recipient || {})
+      ...(payload.recipient || {}),
+      isStudent: payload.isStudent !== undefined ? Boolean(payload.isStudent) : (payload.recipient?.isStudent !== undefined ? Boolean(payload.recipient.isStudent) : existing.recipient.isStudent)
     },
+    isStudent: payload.isStudent !== undefined ? Boolean(payload.isStudent) : (payload.recipient?.isStudent !== undefined ? Boolean(payload.recipient.isStudent) : existing.isStudent),
     departureCity: payload.departureCity ?? existing.departureCity,
     destinationCity: payload.destinationCity ?? existing.destinationCity,
     items,
@@ -728,6 +755,7 @@ export async function updateVoucher(idOrTracking: string, payload: any): Promise
     externalCost: payload.externalCost !== undefined ? Number(payload.externalCost) : (existing.externalCost || 0),
     externalPaymentStatus: payload.externalPaymentStatus !== undefined ? payload.externalPaymentStatus : (existing.externalPaymentStatus || 'PAID'),
     externalNotes: payload.externalNotes !== undefined ? payload.externalNotes : existing.externalNotes,
+    history: payload.history !== undefined ? payload.history : (existing.history || []),
   };
 
   memoryVouchers = memoryVouchers.map(v => v.id === existing.id ? updated : v);
@@ -775,6 +803,8 @@ export async function updateVoucher(idOrTracking: string, payload: any): Promise
         externalCost: updated.externalCost,
         externalPaymentStatus: updated.externalPaymentStatus,
         externalNotes: updated.externalNotes,
+        isStudent: updated.isStudent,
+        history: updated.history,
       }).where(eq(vouchersTable.id, existing.id));
     } catch (error) {
       // Memory store handles it
@@ -913,6 +943,87 @@ export async function batchUpdateStatus(ids: string[], status: string): Promise<
       await db.update(vouchersTable)
         .set({ status, updatedAt: new Date() })
         .where(or(inArray(vouchersTable.id, cleanIds), inArray(vouchersTable.trackingNumber, cleanIds)));
+    } catch (error) {
+      // Memory fallback
+    }
+  }
+  return cleanIds.length;
+}
+
+export async function batchUpdatePaymentStatus(
+  ids: string[],
+  paymentStatus: string,
+  advanceAmount?: number,
+  authorName?: string
+): Promise<number> {
+  if (!ids.length) return 0;
+  const now = new Date();
+  const nowIso = now.toISOString();
+  const dateFormatted = now.toLocaleDateString('fr-FR') + ' à ' + now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  const cleanIds = ids.map(id => String(id).trim());
+
+  memoryVouchers = memoryVouchers.map(v => {
+    const vDigits = String(v.trackingNumber || '').replace(/\D/g, '');
+    const isMatch = cleanIds.some(id => {
+      if (id === v.id || id === v.trackingNumber || id === String(v.sequenceNumber)) return true;
+      const idDigits = id.replace(/\D/g, '');
+      return idDigits.length > 0 && idDigits === vDigits;
+    });
+
+    if (isMatch) {
+      let finalAdvance = 0;
+      if (paymentStatus === 'AVANCE') {
+        finalAdvance = advanceAmount !== undefined && advanceAmount > 0 ? advanceAmount : (v.advanceAmount || 0);
+      } else if (paymentStatus === 'PAYE') {
+        finalAdvance = v.totalPrice;
+      }
+      const finalRemaining = paymentStatus === 'PAYE' ? 0 : paymentStatus === 'NON_PAYE' ? v.totalPrice : Math.max(0, Math.round((v.totalPrice - finalAdvance) * 100) / 100);
+
+      const historyEntry: VoucherModificationHistory = {
+        id: `hist-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+        timestamp: nowIso,
+        dateFormatted,
+        authorName: authorName || 'Agent',
+        actionType: 'PAYMENT_CHANGE',
+        title: `Mise à jour groupée du paiement : ${paymentStatus}`,
+        motif: 'Changement de statut de paiement groupé depuis la liste',
+        changes: [{
+          field: 'Statut de paiement',
+          oldValue: v.paymentStatus,
+          newValue: paymentStatus
+        }]
+      };
+
+      return {
+        ...v,
+        paymentStatus: paymentStatus as any,
+        advanceAmount: finalAdvance,
+        remainingAmount: finalRemaining,
+        paymentMethod: paymentStatus as any,
+        history: [historyEntry, ...(v.history || [])],
+        updatedAt: nowIso
+      };
+    }
+    return v;
+  });
+
+  if (db && isDatabaseConfigured()) {
+    try {
+      for (const id of cleanIds) {
+        const v = memoryVouchers.find(item => item.id === id || item.trackingNumber === id);
+        if (v) {
+          await db.update(vouchersTable)
+            .set({
+              paymentStatus: v.paymentStatus,
+              advanceAmount: v.advanceAmount,
+              remainingAmount: v.remainingAmount,
+              paymentMethod: v.paymentMethod,
+              history: v.history,
+              updatedAt: new Date()
+            })
+            .where(or(eq(vouchersTable.id, v.id), eq(vouchersTable.trackingNumber, v.trackingNumber)));
+        }
+      }
     } catch (error) {
       // Memory fallback
     }
