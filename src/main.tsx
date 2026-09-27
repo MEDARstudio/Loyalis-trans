@@ -21,6 +21,16 @@ if (typeof window !== 'undefined') {
   window.addEventListener('unhandledrejection', (event) => {
     console.warn('Unhandled rejection caught gracefully:', event.reason);
   });
+
+  // Guarantee the site favicon with orange square & white LT is set in the tab header
+  try {
+    const existingIcon = document.querySelector("link[rel='icon'][type='image/svg+xml']") as HTMLLinkElement;
+    if (existingIcon) {
+      existingIcon.href = `/favicon.svg?v=${Date.now()}`;
+    }
+  } catch {
+    // Ignore in non-DOM environments
+  }
 }
 
 interface ErrorBoundaryProps {
