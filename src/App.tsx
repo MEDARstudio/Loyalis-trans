@@ -17,6 +17,7 @@ import { BatchShareModal } from './components/BatchShareModal';
 import { CompanySettings, Voucher, VoucherStats, VoucherStatus, AgentProfile, DEFAULT_AGENTS, VoucherSortOption, PaymentStatus, VoucherModificationHistory } from './types';
 import { api } from './services/api';
 import { getCurrentSession, endCurrentSession } from './services/agentAuth';
+import { extractTrackingCode } from './utils/qrGenerator';
 import { PlusCircle, Search, RefreshCw, AlertCircle, Sparkles, Package, BarChart3, History, Plus, ArrowRight, LogOut, ShieldCheck } from 'lucide-react';
 
 const DEFAULT_SETTINGS_FALLBACK: CompanySettings = {
@@ -165,11 +166,16 @@ export default function App() {
   useEffect(() => {
     loadData();
 
-    // Check for ?track=0000001 in URL
+    // Check for ?track=0000001 or QR code in URL
     if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const trackCode = params.get('track');
-      if (trackCode) {
+      const searchParams = new URLSearchParams(window.location.search);
+      const rawTrack = searchParams.get('track') || 
+                       searchParams.get('suivi') || 
+                       searchParams.get('code') || 
+                       searchParams.get('bon') || 
+                       searchParams.get('qr');
+      const trackCode = rawTrack ? extractTrackingCode(rawTrack) : extractTrackingCode(window.location.href);
+      if (trackCode && trackCode !== window.location.href && trackCode.length >= 3) {
         setInitialTrackingQuery(trackCode);
         setActiveTab('tracking');
       }
@@ -734,7 +740,39 @@ export default function App() {
           vouchers={vouchers}
           settings={settings}
           onOpenLogin={() => setIsLoginModalOpen(true)}
+          initialTrackingCode={initialTrackingQuery}
+          onOpenPrint={handleOpenPrintModal}
         />
+
+        {/* Public Visitor Print View */}
+        {isPrintModalOpen && printVoucher && (
+          <VoucherPrintView
+            voucher={printVoucher}
+            settings={settings}
+            onClose={() => {
+              setIsPrintModalOpen(false);
+              setPrintVoucher(null);
+            }}
+            onOpenShareModal={() => {
+              setIsPrintModalOpen(false);
+              setShareVoucher(printVoucher);
+              setIsShareModalOpen(true);
+            }}
+          />
+        )}
+
+        {/* Public Visitor Share Modal */}
+        {isShareModalOpen && shareVoucher && (
+          <VoucherShareModal
+            isOpen={isShareModalOpen}
+            voucher={shareVoucher}
+            settings={settings}
+            onClose={() => {
+              setIsShareModalOpen(false);
+              setShareVoucher(null);
+            }}
+          />
+        )}
 
         <LoginModal
           isOpen={isLoginModalOpen}

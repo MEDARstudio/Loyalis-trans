@@ -204,3 +204,23 @@ export function getPaymentMethodLabel(method?: PaymentMethod | string): string {
       return method;
   }
 }
+
+export function formatValueLabel(field: string, value: any): string {
+  if (value === null || value === undefined) return '-';
+  const str = String(value);
+  const fLower = (field || '').toLowerCase();
+  
+  if (fLower.includes('statut') && !fLower.includes('paiement') && !fLower.includes('règlement')) {
+    const badge = getStatusBadge(str as any);
+    return badge ? badge.label : str;
+  }
+  
+  if (fLower.includes('paiement') || fLower.includes('règlement')) {
+    if (str === 'PAYE' || str === 'DEJA_PAYE') return 'Payé';
+    if (str === 'NON_PAYE' || str === 'A_LA_LIVRAISON') return 'À la livraison (Non payé)';
+    if (str === 'AVANCE') return 'Avance';
+  }
+  
+  return str;
+}
+
