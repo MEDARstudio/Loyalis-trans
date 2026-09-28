@@ -9,16 +9,11 @@ declare global {
 const DEFAULT_SUPABASE_POSTGRES_URL = 'postgresql://postgres:6I5LP3DOxc0zHgBT@db.olahhcegkeqromqdfwnj.supabase.co:5432/postgres';
 
 export const getConnectionString = (): string | null => {
-  const conn = 
-    process.env.DATABASE_URL || 
-    process.env.SUPABASE_DB_URL || 
-    process.env.POSTGRES_URL ||
-    DEFAULT_SUPABASE_POSTGRES_URL;
-
-  if (conn && conn.trim() !== '') {
-    return conn.trim();
+  const envConn = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+  if (envConn && envConn.trim() !== '' && !envConn.includes('nhvmbzhpcaaqfjgnkdrd')) {
+    return envConn.trim();
   }
-  return null;
+  return DEFAULT_SUPABASE_POSTGRES_URL;
 };
 
 export const createPool = (): Pool | null => {

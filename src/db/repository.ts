@@ -805,7 +805,7 @@ export async function updateVoucher(idOrTracking: string, payload: any): Promise
         externalNotes: updated.externalNotes,
         isStudent: updated.isStudent,
         history: updated.history,
-      }).where(eq(vouchersTable.id, existing.id));
+      }).where(or(eq(vouchersTable.id, existing.id), eq(vouchersTable.trackingNumber, existing.trackingNumber)));
     } catch (error) {
       // Memory store handles it
     }
@@ -919,10 +919,16 @@ export async function batchValidateVouchers(ids: string[], validatedBy: string):
   return ids.length;
 }
 
-export async function batchUpdateStatus(ids: string[], status: string): Promise<number> {
+export async function batchUpdateStatus(ids: string[], status: string, authorName?: string): Promise<number> {
   if (!ids.length) return 0;
-  const now = new Date().toISOString();
+  const now = new Date();
+  const nowIso = now.toISOString();
+  const dateFormatted = now.toLocaleDateString('fr-FR') + ' à ' + now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
   const cleanIds = ids.map(id => String(id).trim());
+
+  // 1. Fetch current vouchers so memory is synced with database
+  let allVouchers = await getVouchers();
+  const matchedVouchers: Voucher[] = [];
 
   memoryVouchers = memoryVouchers.map(v => {
     const vDigits = String(v.trackingNumber || '').replace(/\D/g, '');
@@ -933,18 +939,52 @@ export async function batchUpdateStatus(ids: string[], status: string): Promise<
     });
 
     if (isMatch) {
-      return { ...v, status: status as any, updatedAt: now };
+      const histEntry: VoucherModificationHistory = {
+        id: `hist-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+        timestamp: nowIso,
+        dateFormatted,
+        authorName: authorName || 'Agent',
+        actionType: 'STATUS_CHANGE',
+        title: `Changement de statut groupé : ${status}`,
+        motif: 'Mise à jour groupée depuis la liste des bons',
+        changes: [{
+          field: 'Statut du bon',
+          oldValue: v.status,
+          newValue: status
+        }]
+      };
+      const updated = {
+        ...v,
+        status: status as any,
+        history: [histEntry, ...(v.history || [])],
+        updatedAt: nowIso
+      };
+      matchedVouchers.push(updated);
+      return updated;
     }
     return v;
   });
 
   if (db && isDatabaseConfigured()) {
     try {
+      for (const v of matchedVouchers) {
+        await db.update(vouchersTable)
+          .set({ 
+            status: v.status,
+            history: v.history,
+            updatedAt: new Date() 
+          })
+          .where(or(eq(vouchersTable.id, v.id), eq(vouchersTable.trackingNumber, v.trackingNumber)));
+      }
+      // Also update directly for cleanIds
       await db.update(vouchersTable)
-        .set({ status, updatedAt: new Date() })
+        .set({
+          status: status,
+          updatedAt: new Date()
+        })
         .where(or(inArray(vouchersTable.id, cleanIds), inArray(vouchersTable.trackingNumber, cleanIds)));
     } catch (error) {
-      // Memory fallback
+      console.warn('DB batchUpdateStatus error:', error);
     }
   }
   return cleanIds.length;
@@ -961,6 +1001,10 @@ export async function batchUpdatePaymentStatus(
   const nowIso = now.toISOString();
   const dateFormatted = now.toLocaleDateString('fr-FR') + ' à ' + now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
   const cleanIds = ids.map(id => String(id).trim());
+
+  // 1. Fetch current vouchers first so memory is fresh
+  let allVouchers = await getVouchers();
+  const matchedVouchers: Voucher[] = [];
 
   memoryVouchers = memoryVouchers.map(v => {
     const vDigits = String(v.trackingNumber || '').replace(/\D/g, '');
@@ -985,8 +1029,8 @@ export async function batchUpdatePaymentStatus(
         dateFormatted,
         authorName: authorName || 'Agent',
         actionType: 'PAYMENT_CHANGE',
-        title: `Mise à jour groupée du paiement : ${paymentStatus}`,
-        motif: 'Changement de statut de paiement groupé depuis la liste',
+        title: `Mise à jour groupée du paiement : ${paymentStatus === 'PAYE' ? 'Payé' : paymentStatus === 'NON_PAYE' ? 'À la livraison' : 'Avance'}`,
+        motif: 'Changement de statut de paiement groupé depuis la liste des bons',
         changes: [{
           field: 'Statut de paiement',
           oldValue: v.paymentStatus,
@@ -994,7 +1038,7 @@ export async function batchUpdatePaymentStatus(
         }]
       };
 
-      return {
+      const updated = {
         ...v,
         paymentStatus: paymentStatus as any,
         advanceAmount: finalAdvance,
@@ -1003,29 +1047,36 @@ export async function batchUpdatePaymentStatus(
         history: [historyEntry, ...(v.history || [])],
         updatedAt: nowIso
       };
+      matchedVouchers.push(updated);
+      return updated;
     }
     return v;
   });
 
   if (db && isDatabaseConfigured()) {
     try {
-      for (const id of cleanIds) {
-        const v = memoryVouchers.find(item => item.id === id || item.trackingNumber === id);
-        if (v) {
-          await db.update(vouchersTable)
-            .set({
-              paymentStatus: v.paymentStatus,
-              advanceAmount: v.advanceAmount,
-              remainingAmount: v.remainingAmount,
-              paymentMethod: v.paymentMethod,
-              history: v.history,
-              updatedAt: new Date()
-            })
-            .where(or(eq(vouchersTable.id, v.id), eq(vouchersTable.trackingNumber, v.trackingNumber)));
-        }
+      for (const v of matchedVouchers) {
+        await db.update(vouchersTable)
+          .set({
+            paymentStatus: v.paymentStatus,
+            advanceAmount: v.advanceAmount,
+            remainingAmount: v.remainingAmount,
+            paymentMethod: v.paymentMethod,
+            history: v.history,
+            updatedAt: new Date()
+          })
+          .where(or(eq(vouchersTable.id, v.id), eq(vouchersTable.trackingNumber, v.trackingNumber)));
       }
+      // Direct update for any cleanIds
+      await db.update(vouchersTable)
+        .set({
+          paymentStatus: paymentStatus,
+          paymentMethod: paymentStatus,
+          updatedAt: new Date()
+        })
+        .where(or(inArray(vouchersTable.id, cleanIds), inArray(vouchersTable.trackingNumber, cleanIds)));
     } catch (error) {
-      // Memory fallback
+      console.warn('DB batchUpdatePaymentStatus error:', error);
     }
   }
   return cleanIds.length;

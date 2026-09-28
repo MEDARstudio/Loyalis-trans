@@ -665,8 +665,8 @@ export const VoucherDetailModal: React.FC<VoucherDetailModalProps> = ({
                   }}
                   className={`px-3 py-1.5 text-xs font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer shadow-xs active:scale-95 flex items-center gap-1 ${
                     paymentInfo.type === 'NON_PAYE'
-                      ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 hover:bg-blue-50 hover:border-blue-400'
+                      ? 'bg-rose-600 text-white border-rose-600 shadow-sm'
+                      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 hover:bg-rose-50 hover:border-rose-400'
                   }`}
                 >
                   <Truck className="w-3.5 h-3.5" />
@@ -679,8 +679,8 @@ export const VoucherDetailModal: React.FC<VoucherDetailModalProps> = ({
                   }}
                   className={`px-3 py-1.5 text-xs font-black uppercase tracking-wider rounded-xl border transition-all cursor-pointer shadow-xs active:scale-95 ${
                     paymentInfo.type === 'AVANCE' || isAdvanceInputOpen
-                      ? 'bg-amber-500 text-slate-950 border-amber-600 font-black shadow-sm'
-                      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 hover:bg-amber-50 hover:border-amber-400'
+                      ? 'bg-blue-600 text-white border-blue-600 font-black shadow-sm'
+                      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 hover:bg-blue-50 hover:border-blue-400'
                   }`}
                 >
                   ⏳ Avance...
@@ -690,8 +690,8 @@ export const VoucherDetailModal: React.FC<VoucherDetailModalProps> = ({
 
             {/* Inline Advance Input Form */}
             {isAdvanceInputOpen && (
-              <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 rounded-xl flex flex-wrap items-center gap-2 animate-fadeIn text-xs">
-                <span className="font-bold text-amber-900 dark:text-amber-200">
+              <div className="p-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-300 dark:border-blue-800 rounded-xl flex flex-wrap items-center gap-2 animate-fadeIn text-xs">
+                <span className="font-bold text-blue-900 dark:text-blue-200">
                   Montant de l'avance reçue ({currency}) :
                 </span>
                 <div className="flex items-center gap-2 flex-1 min-w-[200px]">
@@ -703,7 +703,7 @@ export const VoucherDetailModal: React.FC<VoucherDetailModalProps> = ({
                     value={advanceInputVal}
                     onChange={e => setAdvanceInputVal(e.target.value)}
                     placeholder={`Ex: 50 (max ${voucher.totalPrice})`}
-                    className="w-36 px-2.5 py-1 bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700 rounded-lg text-xs font-mono font-bold focus:outline-none"
+                    className="w-36 px-2.5 py-1 bg-white dark:bg-slate-900 border border-blue-300 dark:border-blue-700 rounded-lg text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-blue-500"
                     autoFocus
                     onKeyDown={e => {
                       if (e.key === 'Enter') {
@@ -725,7 +725,7 @@ export const VoucherDetailModal: React.FC<VoucherDetailModalProps> = ({
                         setIsAdvanceInputOpen(false);
                       }
                     }}
-                    className="px-3 py-1 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-lg disabled:opacity-50 cursor-pointer shadow-xs"
+                    className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-lg disabled:opacity-50 cursor-pointer shadow-xs"
                   >
                     Valider l'Avance
                   </button>

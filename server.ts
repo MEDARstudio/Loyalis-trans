@@ -16,6 +16,7 @@ import {
   batchDelete,
   getStats,
   seedInitialDataIfEmpty,
+  ensureDatabaseColumns,
   getDatabaseExplorerData
 } from './src/db/repository.ts';
 import { createPool } from './src/db/index.ts';
@@ -27,9 +28,11 @@ async function startServer() {
   app.use(express.json({ limit: '25mb' }));
   app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 
-  // Seed default data if database is brand new
-  seedInitialDataIfEmpty().catch(err => {
-    console.warn('Seed database check notice:', err?.message || err);
+  // Ensure DB columns exist & Seed default data if database is brand new
+  ensureDatabaseColumns().then(() => {
+    return seedInitialDataIfEmpty();
+  }).catch(err => {
+    console.warn('Database initialization notice:', err?.message || err);
   });
 
   // --- API ROUTES ---
@@ -174,13 +177,13 @@ async function startServer() {
   // Vouchers: Batch Status Update
   const handleBatchStatus = async (req: Request, res: Response) => {
     try {
-      const { ids, status } = req.body;
+      const { ids, status, authorName } = req.body;
       if (!Array.isArray(ids) || !status) {
         res.status(400).json({ error: 'Paramètres invalides' });
         return;
       }
 
-      const count = await batchUpdateStatus(ids, status);
+      const count = await batchUpdateStatus(ids, status, authorName);
       res.json({ success: true, count, updatedCount: count });
     } catch (err: any) {
       console.error('API /api/vouchers/batch-status error:', err);

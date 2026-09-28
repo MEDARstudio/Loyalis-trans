@@ -18,7 +18,17 @@ if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
 
 // Global window error suppressor for cross-origin or third-party extension noise
 if (typeof window !== 'undefined') {
+  window.addEventListener('error', (event) => {
+    if (!event.message || event.message === 'Script error.' || event.message.includes('Script error')) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      return true;
+    }
+    console.warn('Global error caught:', event.message);
+  }, true);
+
   window.addEventListener('unhandledrejection', (event) => {
+    event.preventDefault();
     console.warn('Unhandled rejection caught gracefully:', event.reason);
   });
 

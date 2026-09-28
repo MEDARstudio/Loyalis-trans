@@ -174,9 +174,9 @@ export function getPaymentStatusInfo(
         type: 'AVANCE',
         label: `Avance payée (${finalAdvance} DH)`,
         shortLabel: 'Avance',
-        badgeBg: 'bg-amber-50 dark:bg-amber-950/50',
-        badgeText: 'text-amber-800 dark:text-amber-300',
-        badgeBorder: 'border-amber-300 dark:border-amber-700',
+        badgeBg: 'bg-blue-50 dark:bg-blue-950/50',
+        badgeText: 'text-blue-700 dark:text-blue-300',
+        badgeBorder: 'border-blue-200 dark:border-blue-800',
         advance: finalAdvance,
         remaining: finalRemaining
       };

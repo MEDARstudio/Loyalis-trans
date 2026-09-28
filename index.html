@@ -12,6 +12,23 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#f97316" />
+    <script>
+      (function() {
+        window.addEventListener('error', function(e) {
+          if (!e.message || e.message === 'Script error.' || e.message.includes('Script error')) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            return true;
+          }
+        }, true);
+        window.addEventListener('unhandledrejection', function(e) {
+          if (e.reason && (e.reason.message === 'Script error.' || String(e.reason).includes('Script error'))) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+          }
+        });
+      })();
+    </script>
   </head>
   <body class="min-h-full flex flex-col overflow-x-hidden">
     <div id="root" class="min-h-full flex flex-col flex-1"></div>

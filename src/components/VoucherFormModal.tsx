@@ -1177,52 +1177,31 @@ export const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
                 </div>
               </div>
 
-              {/* OPTION ÉTUDIANT (Destinataire Étudiant) */}
-              <div className={`p-3.5 rounded-xl border-2 transition-all duration-200 ${
-                isStudent 
-                  ? 'bg-gradient-to-r from-purple-900/30 via-indigo-900/20 to-purple-900/40 border-purple-500/80 shadow-md ring-2 ring-purple-500/30' 
-                  : 'bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 hover:border-slate-300'
-              }`}>
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="flex items-start sm:items-center gap-3">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors shadow-sm ${
-                      isStudent 
-                        ? 'bg-gradient-to-tr from-purple-600 via-indigo-600 to-violet-500 text-white shadow-purple-500/30' 
-                        : 'bg-slate-100 dark:bg-slate-700 text-slate-400'
-                    }`}>
-                      <GraduationCap className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className={`text-xs font-black uppercase tracking-wider ${
-                          isStudent ? 'text-purple-900 dark:text-purple-200' : 'text-slate-800 dark:text-slate-200'
-                        }`}>
-                          Option Destinataire Étudiant 🎓
-                        </span>
-                        {isStudent && (
-                          <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-xs">
-                            Actif
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                        Badge étudiant violet visible sur le site, les filtres, le reçu et la facture
-                      </p>
-                    </div>
+              {/* OPTION ÉTUDIANT (Destinataire Étudiant) - Petit bouton cadré sans débordement */}
+              <div className="pt-0.5">
+                <button
+                  type="button"
+                  onClick={() => setIsStudent(!isStudent)}
+                  className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border shadow-2xs active:scale-98 ${
+                    isStudent
+                      ? 'bg-purple-600 hover:bg-purple-700 text-white border-purple-700 ring-2 ring-purple-400/30'
+                      : 'bg-purple-50/70 hover:bg-purple-100 dark:bg-purple-950/40 dark:hover:bg-purple-900/60 text-purple-800 dark:text-purple-300 border-purple-200 dark:border-purple-800/80'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <GraduationCap className={`w-4 h-4 shrink-0 ${isStudent ? 'text-white' : 'text-purple-600 dark:text-purple-400'}`} />
+                    <span className="truncate uppercase tracking-wider text-[11px] font-black">
+                      Destinataire Étudiant
+                    </span>
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setIsStudent(!isStudent)}
-                    className={`px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer self-start sm:self-auto shrink-0 ${
-                      isStudent
-                        ? 'bg-purple-600 hover:bg-purple-700 text-white shadow-sm ring-2 ring-purple-400/40'
-                        : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600'
-                    }`}
-                  >
-                    {isStudent ? '✓ Étudiant Sélectionné' : '+ Activer Option Étudiant'}
-                  </button>
-                </div>
+                  <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider shrink-0 ${
+                    isStudent
+                      ? 'bg-white/20 text-white'
+                      : 'bg-purple-200/80 dark:bg-purple-900/80 text-purple-900 dark:text-purple-200'
+                  }`}>
+                    {isStudent ? 'Actif ✓' : 'Tarif Étudiant'}
+                  </span>
+                </button>
               </div>
             </div>
           </div>
@@ -1576,17 +1555,17 @@ export const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
                   }}
                   className={`p-3.5 rounded-xl border-2 text-left flex flex-col justify-between transition-all ${
                     paymentStatus === 'AVANCE'
-                      ? 'border-amber-500 bg-amber-50/80 dark:bg-amber-950/40 text-amber-900 dark:text-amber-100 shadow-sm ring-2 ring-amber-500/20'
+                      ? 'border-blue-500 bg-blue-50/80 dark:bg-blue-950/40 text-blue-900 dark:text-blue-100 shadow-sm ring-2 ring-blue-500/20'
                       : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-black uppercase tracking-wider flex items-center gap-1.5">
-                      <Banknote className={`w-4 h-4 ${paymentStatus === 'AVANCE' ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400'}`} />
+                      <Banknote className={`w-4 h-4 ${paymentStatus === 'AVANCE' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'}`} />
                       Avance
                     </span>
                     {paymentStatus === 'AVANCE' && (
-                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
+                      <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" />
                     )}
                   </div>
                   <div className="text-sm font-bold">Acompte partiel</div>
@@ -1598,10 +1577,10 @@ export const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
 
               {/* Special Box for AVANCE Details */}
               {paymentStatus === 'AVANCE' && (
-                <div className="mt-3 p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/80 rounded-xl space-y-3">
+                <div className="mt-3 p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/80 rounded-xl space-y-3">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                     <div className="flex-1 w-full">
-                      <label className="block text-xs font-bold text-amber-900 dark:text-amber-200 uppercase mb-1">
+                      <label className="block text-xs font-bold text-blue-900 dark:text-blue-200 uppercase mb-1">
                         Montant de l'avance reçue ({currency}) <span className="text-rose-600">*</span>
                       </label>
                       <div className="relative">
@@ -1613,9 +1592,9 @@ export const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
                           value={advanceAmount}
                           onChange={e => setAdvanceAmount(e.target.value)}
                           placeholder="Ex: 50"
-                          className="w-full pl-3 pr-12 py-2 bg-white dark:bg-slate-900 border-2 border-amber-400 dark:border-amber-600 rounded-lg text-lg font-black text-amber-950 dark:text-amber-100 focus:ring-2 focus:ring-amber-500"
+                          className="w-full pl-3 pr-12 py-2 bg-white dark:bg-slate-900 border-2 border-blue-400 dark:border-blue-600 rounded-lg text-lg font-black text-blue-950 dark:text-blue-100 focus:ring-2 focus:ring-blue-500"
                         />
-                        <span className="absolute right-3 top-2.5 text-xs font-bold text-amber-700 dark:text-amber-300">
+                        <span className="absolute right-3 top-2.5 text-xs font-bold text-blue-700 dark:text-blue-300">
                           {currency}
                         </span>
                       </div>
@@ -1623,28 +1602,28 @@ export const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
 
                     {/* Quick percentage buttons */}
                     <div className="w-full sm:w-auto">
-                      <span className="block text-[11px] font-semibold text-amber-800 dark:text-amber-300 mb-1">
+                      <span className="block text-[11px] font-semibold text-blue-800 dark:text-blue-300 mb-1">
                         Raccourcis rapides
                       </span>
                       <div className="flex items-center gap-1.5">
                         <button
                           type="button"
                           onClick={() => setAdvanceAmount(String(Math.round(finalPrice * 0.25)))}
-                          className="px-2.5 py-1 text-xs font-bold bg-amber-100 dark:bg-amber-900/60 hover:bg-amber-200 text-amber-900 dark:text-amber-200 rounded-md border border-amber-300 dark:border-amber-700"
+                          className="px-2.5 py-1 text-xs font-bold bg-blue-100 dark:bg-blue-900/60 hover:bg-blue-200 text-blue-900 dark:text-blue-200 rounded-md border border-blue-300 dark:border-blue-700"
                         >
                           25%
                         </button>
                         <button
                           type="button"
                           onClick={() => setAdvanceAmount(String(Math.round(finalPrice * 0.5)))}
-                          className="px-2.5 py-1 text-xs font-bold bg-amber-100 dark:bg-amber-900/60 hover:bg-amber-200 text-amber-900 dark:text-amber-200 rounded-md border border-amber-300 dark:border-amber-700"
+                          className="px-2.5 py-1 text-xs font-bold bg-blue-100 dark:bg-blue-900/60 hover:bg-blue-200 text-blue-900 dark:text-blue-200 rounded-md border border-blue-300 dark:border-blue-700"
                         >
                           50%
                         </button>
                         <button
                           type="button"
                           onClick={() => setAdvanceAmount(String(Math.round(finalPrice * 0.75)))}
-                          className="px-2.5 py-1 text-xs font-bold bg-amber-100 dark:bg-amber-900/60 hover:bg-amber-200 text-amber-900 dark:text-amber-200 rounded-md border border-amber-300 dark:border-amber-700"
+                          className="px-2.5 py-1 text-xs font-bold bg-blue-100 dark:bg-blue-900/60 hover:bg-blue-200 text-blue-900 dark:text-blue-200 rounded-md border border-blue-300 dark:border-blue-700"
                         >
                           75%
                         </button>
@@ -1653,14 +1632,14 @@ export const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
                   </div>
 
                   {/* Summary Breakdown of Avance */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-amber-200/80 dark:border-amber-800/60 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-blue-200/80 dark:border-blue-800/60 text-xs">
                     <div className="p-2 bg-white/80 dark:bg-slate-900/60 rounded-lg">
                       <span className="text-slate-500 dark:text-slate-400 block">Total du bon</span>
                       <span className="font-bold text-slate-800 dark:text-slate-200">{formatCurrency(finalPrice, currency)}</span>
                     </div>
-                    <div className="p-2 bg-emerald-100/60 dark:bg-emerald-950/40 rounded-lg border border-emerald-200 dark:border-emerald-800">
-                      <span className="text-emerald-700 dark:text-emerald-300 block font-semibold">Avance versée</span>
-                      <span className="font-black text-emerald-800 dark:text-emerald-200 text-sm">
+                    <div className="p-2 bg-blue-100/60 dark:bg-blue-950/40 rounded-lg border border-blue-200 dark:border-blue-800">
+                      <span className="text-blue-700 dark:text-blue-300 block font-semibold">Avance versée</span>
+                      <span className="font-black text-blue-800 dark:text-blue-200 text-sm">
                         {formatCurrency(numericAdvance, currency)}
                       </span>
                     </div>

@@ -424,7 +424,7 @@ export default function App() {
     }));
 
     try {
-      const res = await api.batchUpdateStatus(ids, newStatus);
+      const res = await api.batchUpdateStatus(ids, newStatus, currentAgent?.name);
       showToast(`${res.count || ids.length} bon(s) mis à jour vers "${newStatus}"`);
     } catch (err: any) {
       console.warn('Batch status update handled:', err);

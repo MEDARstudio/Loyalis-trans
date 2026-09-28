@@ -771,14 +771,14 @@ export const api = {
   },
 
   // --- BATCH UPDATE STATUS ---
-  async batchUpdateStatus(ids: string[], status: string): Promise<{ success: boolean; count: number }> {
+  async batchUpdateStatus(ids: string[], status: string, authorName?: string): Promise<{ success: boolean; count: number }> {
     const cleanIds = ids.map(id => String(id || '').trim());
 
     try {
       const res = await fetch('/api/vouchers/batch/status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: cleanIds, status })
+        body: JSON.stringify({ ids: cleanIds, status, authorName })
       });
       const contentType = res.headers.get('content-type');
       if (res.ok && contentType && contentType.includes('application/json')) {

@@ -35,12 +35,14 @@ import {
   CloudUpload,
   GraduationCap,
   Coins,
+  History,
   X
 } from 'lucide-react';
 import { CompanySettings, Voucher, VoucherStatus, AgentProfile, VoucherSortOption, PaymentStatus } from '../types';
 import { formatCurrency, formatDate, getPaymentMethodLabel, getPaymentStatusInfo, getStatusBadge } from '../utils/formatters';
 import { ConfirmModal } from './ConfirmModal';
 import { VoucherPhotoViewerModal } from './VoucherPhotoViewerModal';
+import { VoucherHistoryModal } from './VoucherHistoryModal';
 
 interface VouchersListProps {
   vouchers: Voucher[];
@@ -111,6 +113,7 @@ export const VouchersList: React.FC<VouchersListProps> = ({
 }) => {
   const currency = settings.currency || 'DH';
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const [selectedHistoryVoucher, setSelectedHistoryVoucher] = useState<Voucher | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id?: string; trackingNumber?: string; isBatch?: boolean; count?: number } | null>(null);
   const [selectedPhotoVoucher, setSelectedPhotoVoucher] = useState<Voucher | null>(null);
   const [advanceModalOpen, setAdvanceModalOpen] = useState<boolean>(false);
@@ -314,8 +317,8 @@ export const VouchersList: React.FC<VouchersListProps> = ({
                         selectedIds.forEach(id => onUpdatePayment(id, 'NON_PAYE', 0));
                       }
                     }}
-                    className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer shadow-xs flex items-center gap-1 active:scale-95"
-                    title="Marquer comme À LA LIVRAISON (payable par le destinataire)"
+                    className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer shadow-xs flex items-center gap-1 active:scale-95"
+                    title="Marquer comme À LA LIVRAISON (payable par le destinataire - ROUGE)"
                   >
                     <Truck className="w-3.5 h-3.5" />
                     <span>🚚 À la livraison</span>
@@ -327,10 +330,11 @@ export const VouchersList: React.FC<VouchersListProps> = ({
                       setAdvanceAmountInput('');
                       setAdvanceModalOpen(true);
                     }}
-                    className="px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-[11px] uppercase tracking-wider transition-all cursor-pointer shadow-xs active:scale-95"
-                    title="Définir une avance reçue sur les bons sélectionnés"
+                    className="px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-black text-[11px] uppercase tracking-wider transition-all cursor-pointer shadow-xs active:scale-95 flex items-center gap-1"
+                    title="Définir une avance reçue sur les bons sélectionnés (BLEU)"
                   >
-                    ⏳ Avance...
+                    <Coins className="w-3.5 h-3.5" />
+                    <span>⏳ Avance...</span>
                   </button>
                 </div>
               )}
@@ -574,7 +578,7 @@ export const VouchersList: React.FC<VouchersListProps> = ({
                         value={v.status}
                         onChange={e => {
                           const newStatus = e.target.value as VoucherStatus;
-                          if (selectedIds.includes(v.id) && selectedIds.length > 1) {
+                          if (selectedIds.includes(v.id) && selectedIds.length > 0) {
                             onBatchUpdateStatus(selectedIds, newStatus);
                           } else {
                             onUpdateStatus(v.id, newStatus);
@@ -667,7 +671,7 @@ export const VouchersList: React.FC<VouchersListProps> = ({
                             setAdvanceAmountInput(v.advanceAmount ? String(v.advanceAmount) : '');
                             setAdvanceModalOpen(true);
                           } else {
-                            if (selectedIds.includes(v.id) && selectedIds.length > 1 && onBatchUpdatePaymentStatus) {
+                            if (selectedIds.includes(v.id) && selectedIds.length > 0 && onBatchUpdatePaymentStatus) {
                               onBatchUpdatePaymentStatus(selectedIds, val);
                             } else if (onUpdatePayment) {
                               onUpdatePayment(v.id, val, val === 'PAYE' ? v.totalPrice : 0);
@@ -680,17 +684,17 @@ export const VouchersList: React.FC<VouchersListProps> = ({
                           paymentInfo.type === 'PAYE'
                             ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-300'
                             : paymentInfo.type === 'AVANCE'
-                            ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-300'
-                            : 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-300'
+                            ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-300'
+                            : 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-300'
                         }`}
                         title="Changer statut de paiement"
                       >
                         <option value="PAYE" className="bg-white dark:bg-slate-900 text-emerald-700 font-bold">✓ Payé</option>
-                        <option value="NON_PAYE" className="bg-white dark:bg-slate-900 text-blue-700 font-bold">🚚 À la livraison</option>
-                        <option value="AVANCE" className="bg-white dark:bg-slate-900 text-amber-700 font-bold">⏳ Avance...</option>
+                        <option value="NON_PAYE" className="bg-white dark:bg-slate-900 text-rose-700 font-bold">🚚 À la livraison</option>
+                        <option value="AVANCE" className="bg-white dark:bg-slate-900 text-blue-700 font-bold">⏳ Avance...</option>
                       </select>
                       {paymentInfo.type === 'AVANCE' && paymentInfo.remaining > 0 && (
-                        <span className="text-[9px] font-bold text-rose-600 dark:text-rose-400 block font-mono">
+                        <span className="text-[9px] font-bold text-blue-600 dark:text-blue-400 block font-mono">
                           Reste: {paymentInfo.remaining} {currency}
                         </span>
                       )}
@@ -698,7 +702,7 @@ export const VouchersList: React.FC<VouchersListProps> = ({
                   </div>
 
                   {/* Quick Action Touch Buttons Mobile */}
-                  <div className="grid grid-cols-5 gap-1 pt-0.5 w-full">
+                  <div className="grid grid-cols-6 gap-1 pt-0.5 w-full">
                     <button
                       type="button"
                       onClick={() => onOpenDetail(v)}
@@ -706,6 +710,16 @@ export const VouchersList: React.FC<VouchersListProps> = ({
                     >
                       <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
                       <span className="truncate w-full text-center">Détails</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setSelectedHistoryVoucher(v)}
+                      className="py-2 px-0.5 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-bold text-[8px] xs:text-[9px] sm:text-[10px] flex flex-col items-center justify-center gap-0.5 hover:bg-blue-100 cursor-pointer min-w-0"
+                      title="Historique des modifications"
+                    >
+                      <History className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                      <span className="truncate w-full text-center">Historique</span>
                     </button>
 
                     <button
@@ -997,7 +1011,7 @@ export const VouchersList: React.FC<VouchersListProps> = ({
                                 setAdvanceAmountInput(v.advanceAmount ? String(v.advanceAmount) : '');
                                 setAdvanceModalOpen(true);
                               } else {
-                                if (selectedIds.includes(v.id) && selectedIds.length > 1 && onBatchUpdatePaymentStatus) {
+                                if (selectedIds.includes(v.id) && selectedIds.length > 0 && onBatchUpdatePaymentStatus) {
                                   onBatchUpdatePaymentStatus(selectedIds, val);
                                 } else if (onUpdatePayment) {
                                   onUpdatePayment(v.id, val, val === 'PAYE' ? v.totalPrice : 0);
@@ -1010,18 +1024,18 @@ export const VouchersList: React.FC<VouchersListProps> = ({
                               paymentInfo.type === 'PAYE'
                                 ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700 hover:bg-emerald-100'
                                 : paymentInfo.type === 'AVANCE'
-                                ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700 hover:bg-amber-100'
-                                : 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700 hover:bg-blue-100'
+                                ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700 hover:bg-blue-100'
+                                : 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-700 hover:bg-rose-100'
                             }`}
                             title="Modifier le statut : Payé ou À la livraison"
                           >
                             <option value="PAYE" className="bg-white dark:bg-slate-900 text-emerald-700 font-bold">✓ Payé (100%)</option>
-                            <option value="NON_PAYE" className="bg-white dark:bg-slate-900 text-blue-700 font-bold">🚚 À la livraison</option>
-                            <option value="AVANCE" className="bg-white dark:bg-slate-900 text-amber-700 font-bold">⏳ Avance...</option>
+                            <option value="NON_PAYE" className="bg-white dark:bg-slate-900 text-rose-700 font-bold">🚚 À la livraison</option>
+                            <option value="AVANCE" className="bg-white dark:bg-slate-900 text-blue-700 font-bold">⏳ Avance...</option>
                           </select>
                         </div>
                         {paymentInfo.type === 'AVANCE' && paymentInfo.remaining > 0 && (
-                          <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 block mt-0.5 font-mono">
+                          <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 block mt-0.5 font-mono">
                             Reste : {formatCurrency(paymentInfo.remaining, currency)}
                           </span>
                         )}
@@ -1033,7 +1047,7 @@ export const VouchersList: React.FC<VouchersListProps> = ({
                           value={v.status}
                           onChange={e => {
                             const newStatus = e.target.value as VoucherStatus;
-                            if (selectedIds.includes(v.id) && selectedIds.length > 1) {
+                            if (selectedIds.includes(v.id) && selectedIds.length > 0) {
                               onBatchUpdateStatus(selectedIds, newStatus);
                             } else {
                               onUpdateStatus(v.id, newStatus);
@@ -1103,9 +1117,18 @@ export const VouchersList: React.FC<VouchersListProps> = ({
                           <button
                             onClick={() => onOpenDetail(v)}
                             title="Consulter tous les détails du bon"
-                            className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors"
+                            className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
                           >
                             <Eye className="w-4 h-4" />
+                          </button>
+
+                          {/* Modification History */}
+                          <button
+                            onClick={() => setSelectedHistoryVoucher(v)}
+                            title="Voir l'historique complet des modifications de ce bon"
+                            className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-900/60 text-blue-600 dark:text-blue-400 transition-colors cursor-pointer"
+                          >
+                            <History className="w-4 h-4" />
                           </button>
 
                           {/* Photos (Bon Réel / Colis) */}
@@ -1236,13 +1259,22 @@ export const VouchersList: React.FC<VouchersListProps> = ({
         />
       )}
 
+      {/* Full Modification History Modal */}
+      {selectedHistoryVoucher && (
+        <VoucherHistoryModal
+          isOpen={selectedHistoryVoucher !== null}
+          onClose={() => setSelectedHistoryVoucher(null)}
+          voucher={selectedHistoryVoucher}
+        />
+      )}
+
       {/* Batch Advance Payment Modal */}
       {advanceModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 animate-fadeIn">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-amber-500 text-slate-950 flex items-center justify-center font-bold">
+                <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 flex items-center justify-center font-bold">
                   <Coins className="w-4 h-4" />
                 </div>
                 <div>
@@ -1279,7 +1311,7 @@ export const VouchersList: React.FC<VouchersListProps> = ({
                   value={advanceAmountInput}
                   onChange={e => setAdvanceAmountInput(e.target.value)}
                   placeholder="Ex: 50, 100, 200..."
-                  className="w-full pl-3 pr-12 py-2.5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-base font-mono font-bold focus:border-orange-500 focus:outline-none"
+                  className="w-full pl-3 pr-12 py-2.5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-base font-mono font-bold focus:border-blue-500 focus:outline-none"
                   onKeyDown={e => {
                     if (e.key === 'Enter') {
                       const parsed = parseFloat(advanceAmountInput);
@@ -1330,7 +1362,7 @@ export const VouchersList: React.FC<VouchersListProps> = ({
                     setAdvanceTargetVoucher(null);
                   }
                 }}
-                className="px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-black uppercase tracking-wider shadow-sm cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-black uppercase tracking-wider shadow-sm cursor-pointer"
               >
                 Appliquer l'Avance
               </button>
