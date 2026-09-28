@@ -418,16 +418,32 @@ export const PublicTrackingPortal: React.FC<PublicTrackingPortalProps> = ({
             </div>
 
             {/* ========================================================================= */}
-            {/* STATUT EN COURS (HERO HIGHLIGHT)                                          */}
+            {/* STATUT EN COURS OU FINAL (HERO HIGHLIGHT)                                 */}
             {/* ========================================================================= */}
-            <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 border border-slate-800 shadow-xl space-y-4">
+            <div className={`p-5 sm:p-6 rounded-2xl border shadow-xl space-y-4 ${
+              searchedVoucher.status === 'LIVRE'
+                ? 'bg-gradient-to-br from-slate-950 via-purple-950/30 to-slate-950 border-purple-500/40 text-white'
+                : 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 border-slate-800 text-white'
+            }`}>
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
                 <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-orange-500 animate-ping" />
-                  <h3 className="text-xs font-black uppercase tracking-wider text-orange-400 flex items-center gap-1.5">
-                    <Truck className="w-4 h-4" />
-                    <span>Statut en cours de ce bon</span>
-                  </h3>
+                  {searchedVoucher.status === 'LIVRE' ? (
+                    <>
+                      <span className="w-3 h-3 rounded-full bg-purple-500" />
+                      <h3 className="text-xs font-black uppercase tracking-wider text-purple-300 flex items-center gap-1.5">
+                        <CheckCircle2 className="w-4 h-4 text-purple-400" />
+                        <span>Statut Final : Expédition Livrée</span>
+                      </h3>
+                    </>
+                  ) : (
+                    <>
+                      <span className="w-3 h-3 rounded-full bg-orange-500 animate-ping" />
+                      <h3 className="text-xs font-black uppercase tracking-wider text-orange-400 flex items-center gap-1.5">
+                        <Truck className="w-4 h-4" />
+                        <span>Statut en cours de ce bon</span>
+                      </h3>
+                    </>
+                  )}
                 </div>
                 <span className="text-[11px] text-slate-400 font-mono">
                   Dernière mise à jour : {searchedVoucher.updatedAt ? formatDateTime(searchedVoucher.updatedAt) : formatDate(searchedVoucher.date)}
@@ -439,18 +455,31 @@ export const PublicTrackingPortal: React.FC<PublicTrackingPortalProps> = ({
                 {/* Grand Badge Statut Actuel */}
                 <div className="md:col-span-2 space-y-2">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-2xl bg-orange-500/20 text-orange-400 border border-orange-500/40 flex items-center justify-center shrink-0">
-                      <Truck className="w-6 h-6 animate-pulse" />
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border ${
+                      searchedVoucher.status === 'LIVRE'
+                        ? 'bg-purple-500/20 text-purple-300 border-purple-500/40'
+                        : 'bg-orange-500/20 text-orange-400 border-orange-500/40'
+                    }`}>
+                      {searchedVoucher.status === 'LIVRE' ? (
+                        <CheckCircle2 className="w-6 h-6 text-purple-400" />
+                      ) : (
+                        <Truck className="w-6 h-6 animate-pulse" />
+                      )}
                     </div>
                     <div>
-                      <div className="text-lg sm:text-xl font-black uppercase tracking-tight text-white">
-                        {statusInfo?.label}
+                      <div className="text-lg sm:text-xl font-black uppercase tracking-tight text-white flex items-center gap-2">
+                        <span>{statusInfo?.label}</span>
+                        {searchedVoucher.status === 'LIVRE' && (
+                          <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded-full bg-purple-500/25 text-purple-300 border border-purple-500/40">
+                            Livraison Terminée
+                          </span>
+                        )}
                       </div>
                       <p className="text-xs text-slate-300 font-medium mt-0.5">
                         {searchedVoucher.status === 'EN_ATTENTE' && "Votre colis a été pris en charge à l'agence de départ. Il est en cours de tri et préparé pour le prochain départ."}
                         {searchedVoucher.status === 'EN_TRANSIT' && `Votre colis est actuellement en cours d'acheminement routier vers ${searchedVoucher.recipient.destination || searchedVoucher.destinationCity}.`}
                         {searchedVoucher.status === 'ARRIVE_AGENCE' && `Le colis est arrivé à destination (${searchedVoucher.recipient.destination || searchedVoucher.destinationCity}) et est disponible pour retrait immédiat.`}
-                        {searchedVoucher.status === 'LIVRE' && "Colis remis au destinataire. Expédition finalisée avec succès."}
+                        {searchedVoucher.status === 'LIVRE' && "Colis remis en main propre au destinataire. Expédition et livraison finalisées avec succès."}
                         {searchedVoucher.status === 'ANNULE' && "Cette expédition a été annulée par l'agence."}
                       </p>
                     </div>
@@ -500,38 +529,69 @@ export const PublicTrackingPortal: React.FC<PublicTrackingPortalProps> = ({
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                   {steps.map((step, idx) => {
-                    const isDone = idx <= currentStepIdx;
-                    const isCurrent = idx === currentStepIdx;
+                    const isDelivered = searchedVoucher.status === 'LIVRE';
+                    const isCurrent = !isDelivered && idx === currentStepIdx;
+                    const isPast = isDelivered ? idx < 3 : idx < currentStepIdx;
+                    const isFinalDeliveredStep = isDelivered && idx === 3;
 
                     return (
                       <div
                         key={step.key}
                         className={`p-3.5 rounded-2xl border transition-all ${
-                          isCurrent
-                            ? 'bg-orange-500/10 border-orange-500 ring-1 ring-orange-500/30'
-                            : isDone
-                            ? 'bg-slate-800/80 border-slate-700'
-                            : 'bg-slate-900/40 border-slate-800/60 opacity-50'
+                          isFinalDeliveredStep
+                            ? 'bg-purple-950/40 border-purple-500 ring-2 ring-purple-500/40 text-purple-200 shadow-md shadow-purple-950/30'
+                            : isCurrent
+                            ? 'bg-orange-500/10 border-orange-500 ring-2 ring-orange-500/30'
+                            : isPast
+                            ? 'bg-emerald-950/30 border-emerald-500/50 ring-1 ring-emerald-500/20'
+                            : 'bg-slate-900/40 border-slate-800/60 opacity-40'
                         }`}
                       >
                         <div className="flex items-center justify-between mb-1.5">
                           <span className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs ${
-                            isCurrent
+                            isFinalDeliveredStep
+                              ? 'bg-purple-600 text-white shadow-md shadow-purple-500/30'
+                              : isCurrent
                               ? 'bg-orange-500 text-white animate-pulse'
-                              : isDone
+                              : isPast
                               ? 'bg-emerald-500 text-white'
                               : 'bg-slate-800 text-slate-500'
                           }`}>
-                            {isDone && !isCurrent ? <CheckCircle2 className="w-3.5 h-3.5" /> : idx + 1}
+                            {isFinalDeliveredStep ? (
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                            ) : isPast ? (
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                            ) : (
+                              idx + 1
+                            )}
                           </span>
-                          {isCurrent && (
-                            <span className="text-[9px] uppercase font-black text-orange-400 bg-orange-500/20 px-1.5 py-0.5 rounded">
+
+                          {/* Badge condition: VIOLET pour Livré SANS signe en cours, ORANGE pour étape en cours */}
+                          {isFinalDeliveredStep ? (
+                            <span className="text-[9px] uppercase font-black text-purple-300 bg-purple-500/25 border border-purple-500/40 px-2 py-0.5 rounded">
+                              Livré
+                            </span>
+                          ) : isCurrent ? (
+                            <span className="text-[9px] uppercase font-black text-orange-400 bg-orange-500/20 border border-orange-500/30 px-1.5 py-0.5 rounded flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-ping"></span>
                               En cours
                             </span>
-                          )}
+                          ) : isPast ? (
+                            <span className="text-[9px] uppercase font-black text-emerald-400 bg-emerald-500/20 border border-emerald-500/30 px-1.5 py-0.5 rounded">
+                              Passé
+                            </span>
+                          ) : null}
                         </div>
                         <h4 className="text-xs font-bold text-white">{step.label}</h4>
-                        <p className="text-[10px] text-slate-400 mt-0.5">{step.desc}</p>
+                        <p className={`text-[10px] mt-0.5 ${
+                          isFinalDeliveredStep
+                            ? 'text-purple-300/80 font-medium'
+                            : isPast
+                            ? 'text-emerald-300/80'
+                            : 'text-slate-400'
+                        }`}>
+                          {step.desc}
+                        </p>
                       </div>
                     );
                   })}
@@ -545,94 +605,32 @@ export const PublicTrackingPortal: React.FC<PublicTrackingPortalProps> = ({
             )}
 
             {/* ========================================================================= */}
-            {/* DERNIERS STATUTS & HISTORIQUE COMPLET                                     */}
+            {/* TRAÇABILITÉ OFFICIELLE CLIENT (Sans motifs internes d'administration)     */}
             {/* ========================================================================= */}
-            <div className="p-5 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-3.5">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-2.5">
-                <div className="flex items-center gap-2">
-                  <History className="w-4 h-4 text-orange-500" />
-                  <h3 className="text-xs font-black uppercase tracking-wider text-white">
-                    Derniers statuts & Historique d'acheminement ({statusHistory.length + 1})
-                  </h3>
+            <div className="p-4 sm:p-5 rounded-2xl bg-slate-950/60 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-orange-500/15 text-orange-400 border border-orange-500/30 flex items-center justify-center shrink-0">
+                  <ShieldCheck className="w-5 h-5" />
                 </div>
-                <span className="text-[11px] text-slate-400">
-                  Horodatage officiel et traçabilité en temps réel
-                </span>
+                <div>
+                  <span className="font-bold text-white block">Traçabilité Officielle Loyalis Trans</span>
+                  <span className="text-slate-400 text-[11px]">
+                    Expédition N° <strong className="text-white font-mono">#{searchedVoucher.trackingNumber}</strong> • Enregistrée le {formatDate(searchedVoucher.date)} {searchedVoucher.time ? `à ${searchedVoucher.time}` : ''}
+                  </span>
+                </div>
               </div>
 
-              <div className="space-y-2.5">
-                {/* Status history log entries */}
-                {statusHistory.length > 0 && statusHistory.map((hist, hIdx) => (
-                  <div 
-                    key={hist.id || hIdx}
-                    className="p-3 bg-slate-900 rounded-xl border border-slate-800 shadow-2xs space-y-1.5"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="w-2 h-2 rounded-full bg-orange-500 shrink-0" />
-                        <span className="text-xs font-bold text-white">
-                          {hist.title || 'Mise à jour du statut'}
-                        </span>
-                        {hist.actionType && (
-                          <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-slate-800 text-slate-300 border border-slate-700">
-                            {hist.actionType === 'STATUS_CHANGE' ? 'Statut' : hist.actionType === 'PAYMENT_CHANGE' ? 'Paiement' : 'Événement'}
-                          </span>
-                        )}
-                        {hist.authorName && (
-                          <span className="text-[10px] text-slate-400">
-                            par <strong className="text-slate-200">{hist.authorName}</strong>
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-[11px] font-mono text-slate-400 flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-slate-500" />
-                        {hist.dateFormatted || formatDateTime(hist.timestamp)}
-                      </span>
-                    </div>
-
-                    {hist.changes && hist.changes.length > 0 && (
-                      <div className="flex flex-wrap items-center gap-2 text-xs pt-0.5">
-                        {hist.changes.map((c, cIdx) => (
-                          <span key={cIdx} className="inline-flex items-center gap-1 bg-slate-950 px-2 py-0.5 rounded border border-slate-800 text-[11px]">
-                            <strong className="text-slate-400">{c.field} :</strong>
-                            <span className="text-rose-400 line-through">{formatValueLabel(c.field, c.oldValue)}</span>
-                            <ArrowRight className="w-3 h-3 text-slate-500" />
-                            <span className="text-emerald-400 font-bold">{formatValueLabel(c.field, c.newValue)}</span>
-                          </span>
-                        ))}
-                      </div>
-                    )}
-
-                    {hist.motif && (
-                      <p className="text-[11px] text-slate-400 italic">
-                        Note : {hist.motif}
-                      </p>
-                    )}
-                  </div>
-                ))}
-
-                {/* Initial Creation Milestone Always Displayed */}
-                <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 shadow-2xs space-y-1">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                      <span className="text-xs font-bold text-white">
-                        Prise en charge & Création initiale du bon
-                      </span>
-                      <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                        Enregistré
-                      </span>
-                    </div>
-                    <span className="text-[11px] font-mono text-slate-400 flex items-center gap-1">
-                      <Calendar className="w-3.5 h-3.5 text-slate-500" />
-                      {formatDate(searchedVoucher.date)} {searchedVoucher.time ? `à ${searchedVoucher.time}` : ''}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-400">
-                    Enregistré à l'agence de départ ({searchedVoucher.departureCity || 'Casablanca'}) pour destination {searchedVoucher.recipient.destination || searchedVoucher.destinationCity} {searchedVoucher.createdByAgent ? `par l'agent ${searchedVoucher.createdByAgent}` : ''}.
-                  </p>
-                </div>
-
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-[11px] text-slate-500 italic">
+                  Historique détaillé et motifs d'audit réservés à l'administration
+                </span>
+                <button
+                  type="button"
+                  onClick={onOpenLogin}
+                  className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold text-[11px] border border-slate-700 transition-colors cursor-pointer"
+                >
+                  Accès Admin
+                </button>
               </div>
             </div>
 

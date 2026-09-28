@@ -268,15 +268,32 @@ export const TrackingLookup: React.FC<TrackingLookupProps> = ({
           </div>
 
           {/* ========================================================================= */}
-          {/* STATUT EN COURS : HERO HIGHLIGHT                                          */}
+          {/* STATUT EN COURS OU FINAL : HERO HIGHLIGHT                                 */}
           {/* ========================================================================= */}
-          <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 text-white border border-slate-800 shadow-xl space-y-4">
+          <div className={`p-5 sm:p-6 rounded-2xl text-white border shadow-xl space-y-4 ${
+            matchedVoucher.status === 'LIVRE'
+              ? 'bg-gradient-to-br from-slate-900 via-purple-950/40 to-slate-950 border-purple-500/40'
+              : 'bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 border-slate-800'
+          }`}>
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
               <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-orange-500 animate-ping" />
-                <h3 className="text-xs font-black uppercase tracking-wider text-orange-400">
-                  Statut en cours de ce bon
-                </h3>
+                {matchedVoucher.status === 'LIVRE' ? (
+                  <>
+                    <span className="w-3 h-3 rounded-full bg-purple-500" />
+                    <h3 className="text-xs font-black uppercase tracking-wider text-purple-300 flex items-center gap-1.5">
+                      <CheckCircle2 className="w-4 h-4 text-purple-400" />
+                      <span>Statut Final : Expédition Livrée</span>
+                    </h3>
+                  </>
+                ) : (
+                  <>
+                    <span className="w-3 h-3 rounded-full bg-orange-500 animate-ping" />
+                    <h3 className="text-xs font-black uppercase tracking-wider text-orange-400 flex items-center gap-1.5">
+                      <Truck className="w-4 h-4" />
+                      <span>Statut en cours de ce bon</span>
+                    </h3>
+                  </>
+                )}
               </div>
               <span className="text-[11px] text-slate-400 font-mono">
                 Dernière mise à jour : {matchedVoucher.updatedAt ? formatDateTime(matchedVoucher.updatedAt) : formatDate(matchedVoucher.date)}
@@ -288,18 +305,31 @@ export const TrackingLookup: React.FC<TrackingLookupProps> = ({
               {/* Grand Badge Statut Actuel */}
               <div className="md:col-span-2 space-y-2">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-orange-500/20 text-orange-400 border border-orange-500/40 flex items-center justify-center shrink-0">
-                    <Truck className="w-6 h-6 animate-pulse" />
+                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border ${
+                    matchedVoucher.status === 'LIVRE'
+                      ? 'bg-purple-500/20 text-purple-300 border-purple-500/40'
+                      : 'bg-orange-500/20 text-orange-400 border-orange-500/40'
+                  }`}>
+                    {matchedVoucher.status === 'LIVRE' ? (
+                      <CheckCircle2 className="w-6 h-6 text-purple-400" />
+                    ) : (
+                      <Truck className="w-6 h-6 animate-pulse" />
+                    )}
                   </div>
                   <div>
-                    <div className="text-lg sm:text-xl font-black uppercase tracking-tight text-white">
-                      {statusInfo?.label}
+                    <div className="text-lg sm:text-xl font-black uppercase tracking-tight text-white flex items-center gap-2">
+                      <span>{statusInfo?.label}</span>
+                      {matchedVoucher.status === 'LIVRE' && (
+                        <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded-full bg-purple-500/25 text-purple-300 border border-purple-500/40">
+                          Livraison Terminée
+                        </span>
+                      )}
                     </div>
                     <p className="text-xs text-slate-300 font-medium">
                       {matchedVoucher.status === 'EN_ATTENTE' && "Votre colis a été pris en charge à l'agence de départ. Il est en cours de tri et préparé pour le prochain départ."}
                       {matchedVoucher.status === 'EN_TRANSIT' && `Votre colis est actuellement en cours d'acheminement routier vers ${matchedVoucher.recipient.destination || matchedVoucher.destinationCity}.`}
                       {matchedVoucher.status === 'ARRIVE_AGENCE' && `Le colis est arrivé à destination (${matchedVoucher.recipient.destination || matchedVoucher.destinationCity}) et est prêt pour retrait immédiat.`}
-                      {matchedVoucher.status === 'LIVRE' && "Colis remis au destinataire. Expédition finalisée avec succès."}
+                      {matchedVoucher.status === 'LIVRE' && "Colis remis en main propre au destinataire. Expédition finalisée avec succès."}
                       {matchedVoucher.status === 'ANNULE' && "Cette expédition a été annulée par l'agence."}
                     </p>
                   </div>
@@ -349,38 +379,69 @@ export const TrackingLookup: React.FC<TrackingLookupProps> = ({
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 relative">
                 {steps.map((step, idx) => {
-                  const isDone = idx <= currentStepIdx;
-                  const isCurrent = idx === currentStepIdx;
+                  const isDelivered = matchedVoucher.status === 'LIVRE';
+                  const isCurrent = !isDelivered && idx === currentStepIdx;
+                  const isPast = isDelivered ? idx < 3 : idx < currentStepIdx;
+                  const isFinalDeliveredStep = isDelivered && idx === 3;
 
                   return (
                     <div
                       key={step.key}
                       className={`p-3.5 rounded-2xl border transition-all ${
-                        isCurrent
-                          ? 'bg-orange-50 dark:bg-orange-950/30 border-orange-500 ring-2 ring-orange-500/20'
-                          : isDone
-                          ? 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700'
-                          : 'bg-slate-50/40 dark:bg-slate-900/40 border-slate-200/50 dark:border-slate-800/50 opacity-60'
+                        isFinalDeliveredStep
+                          ? 'bg-purple-50 dark:bg-purple-950/40 border-purple-500 ring-2 ring-purple-500/30 text-purple-900 dark:text-purple-200'
+                          : isCurrent
+                          ? 'bg-orange-50 dark:bg-orange-950/30 border-orange-500 ring-2 ring-orange-500/30'
+                          : isPast
+                          ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-500/50 ring-1 ring-emerald-500/20'
+                          : 'bg-slate-50/40 dark:bg-slate-900/40 border-slate-200/50 dark:border-slate-800/50 opacity-40'
                       }`}
                     >
                       <div className="flex items-center justify-between mb-1.5">
                         <span className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs ${
-                          isCurrent
+                          isFinalDeliveredStep
+                            ? 'bg-purple-600 text-white shadow-md shadow-purple-500/30'
+                            : isCurrent
                             ? 'bg-orange-600 text-white animate-pulse'
-                            : isDone
+                            : isPast
                             ? 'bg-emerald-600 text-white'
                             : 'bg-slate-200 dark:bg-slate-700 text-slate-500'
                         }`}>
-                          {isDone && !isCurrent ? <CheckCircle2 className="w-4 h-4" /> : idx + 1}
+                          {isFinalDeliveredStep ? (
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                          ) : isPast ? (
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                          ) : (
+                            idx + 1
+                          )}
                         </span>
-                        {isCurrent && (
-                          <span className="text-[9px] uppercase font-black text-orange-600 bg-orange-100 dark:bg-orange-950 px-2 py-0.5 rounded">
+
+                        {/* Badge condition: VIOLET pour Livré SANS signe en cours, ORANGE pour étape en cours */}
+                        {isFinalDeliveredStep ? (
+                          <span className="text-[9px] uppercase font-black text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-950/80 border border-purple-300 dark:border-purple-800 px-2 py-0.5 rounded">
+                            Livré
+                          </span>
+                        ) : isCurrent ? (
+                          <span className="text-[9px] uppercase font-black text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-950 px-2 py-0.5 rounded border border-orange-300 dark:border-orange-800 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-ping"></span>
                             En cours
                           </span>
-                        )}
+                        ) : isPast ? (
+                          <span className="text-[9px] uppercase font-black text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/80 border border-emerald-300 dark:border-emerald-800 px-1.5 py-0.5 rounded">
+                            Passé
+                          </span>
+                        ) : null}
                       </div>
                       <h4 className="text-xs font-bold text-slate-900 dark:text-white">{step.label}</h4>
-                      <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">{step.desc}</p>
+                      <p className={`text-[10px] mt-0.5 ${
+                        isFinalDeliveredStep
+                          ? 'text-purple-700 dark:text-purple-300/80 font-medium'
+                          : isPast
+                          ? 'text-emerald-700 dark:text-emerald-300/80'
+                          : 'text-slate-500 dark:text-slate-400'
+                      }`}>
+                        {step.desc}
+                      </p>
                     </div>
                   );
                 })}
@@ -394,18 +455,21 @@ export const TrackingLookup: React.FC<TrackingLookupProps> = ({
           )}
 
           {/* ========================================================================= */}
-          {/* DERNIERS STATUTS & HISTORIQUE COMPLET D'ACHEMINEMENT                      */}
+          {/* DERNIERS STATUTS & HISTORIQUE COMPLET D'ACHEMINEMENT (ESPACE ADMIN)       */}
           {/* ========================================================================= */}
           <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 space-y-3.5">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-700/80 pb-2.5">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <History className="w-4 h-4 text-orange-600" />
                 <h3 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">
                   Derniers statuts & Historique d'acheminement ({statusHistory.length || 1})
                 </h3>
+                <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-orange-500/20 text-orange-600 dark:text-orange-400 border border-orange-500/30">
+                  Espace Administrateur • Motifs & Audit
+                </span>
               </div>
               <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                Horodatage officiel et traçabilité
+                Horodatage officiel et traçabilité interne
               </span>
             </div>
 
@@ -415,7 +479,7 @@ export const TrackingLookup: React.FC<TrackingLookupProps> = ({
                 statusHistory.map((hist, hIdx) => (
                   <div 
                     key={hist.id || hIdx}
-                    className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700/80 shadow-2xs space-y-1.5"
+                    className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700/80 shadow-2xs space-y-2"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -426,6 +490,11 @@ export const TrackingLookup: React.FC<TrackingLookupProps> = ({
                         {hist.actionType && (
                           <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                             {hist.actionType === 'STATUS_CHANGE' ? 'Statut' : hist.actionType === 'PAYMENT_CHANGE' ? 'Paiement' : 'Événement'}
+                          </span>
+                        )}
+                        {hist.authorName && (
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                            par <strong className="text-slate-800 dark:text-slate-200">{hist.authorName}</strong>
                           </span>
                         )}
                       </div>
@@ -448,10 +517,12 @@ export const TrackingLookup: React.FC<TrackingLookupProps> = ({
                       </div>
                     )}
 
+                    {/* Motif Administratif */}
                     {hist.motif && (
-                      <p className="text-[11px] text-slate-500 italic">
-                        Note : {hist.motif}
-                      </p>
+                      <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-300 text-xs font-medium flex items-start gap-2">
+                        <strong className="text-amber-700 dark:text-amber-400 font-bold shrink-0">Motif administratif :</strong>
+                        <span>{hist.motif}</span>
+                      </div>
                     )}
                   </div>
                 ))
