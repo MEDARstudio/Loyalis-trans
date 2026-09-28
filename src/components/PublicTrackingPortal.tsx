@@ -604,36 +604,6 @@ export const PublicTrackingPortal: React.FC<PublicTrackingPortalProps> = ({
               </div>
             )}
 
-            {/* ========================================================================= */}
-            {/* TRAÇABILITÉ OFFICIELLE CLIENT (Sans motifs internes d'administration)     */}
-            {/* ========================================================================= */}
-            <div className="p-4 sm:p-5 rounded-2xl bg-slate-950/60 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-orange-500/15 text-orange-400 border border-orange-500/30 flex items-center justify-center shrink-0">
-                  <ShieldCheck className="w-5 h-5" />
-                </div>
-                <div>
-                  <span className="font-bold text-white block">Traçabilité Officielle Loyalis Trans</span>
-                  <span className="text-slate-400 text-[11px]">
-                    Expédition N° <strong className="text-white font-mono">#{searchedVoucher.trackingNumber}</strong> • Enregistrée le {formatDate(searchedVoucher.date)} {searchedVoucher.time ? `à ${searchedVoucher.time}` : ''}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="text-[11px] text-slate-500 italic">
-                  Historique détaillé et motifs d'audit réservés à l'administration
-                </span>
-                <button
-                  type="button"
-                  onClick={onOpenLogin}
-                  className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold text-[11px] border border-slate-700 transition-colors cursor-pointer"
-                >
-                  Accès Admin
-                </button>
-              </div>
-            </div>
-
             {/* Route & Sender/Receiver Card */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               
