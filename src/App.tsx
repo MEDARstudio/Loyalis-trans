@@ -798,32 +798,6 @@ export default function App() {
         </div>
       )}
 
-      {/* Top Admin/Agent Session Bar */}
-      <div className="bg-slate-900 border-b border-slate-800 text-xs text-slate-300 py-1.5 px-4 flex items-center justify-between z-30">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span className="text-xs text-slate-300">
-            Session active : <strong className="text-white font-bold">{sessionAgent.name}</strong> 
-            <span className="ml-1.5 text-[10px] font-black uppercase px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400 border border-orange-500/30">
-              {sessionAgent.role === 'ADMIN' ? 'Administrateur' : 'Agent'}
-            </span>
-            {sessionAgent.agencyCity && (
-              <span className="ml-1.5 text-slate-400 text-[11px]">({sessionAgent.agencyCity})</span>
-            )}
-          </span>
-        </div>
-
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="text-orange-400 hover:text-orange-300 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-colors"
-          title="Se déconnecter et retourner au portail public"
-        >
-          <span>Portail Public Visiteurs</span>
-          <LogOut className="w-3.5 h-3.5" />
-        </button>
-      </div>
-
       {/* Main Header */}
       <Header
         activeTab={activeTab}
@@ -835,7 +809,7 @@ export default function App() {
         syncStatus={syncStatus}
         onRefreshData={() => loadData()}
         vouchersCount={vouchers.length}
-        currentAgent={currentAgent}
+        currentAgent={sessionAgent || currentAgent}
         onSelectAgent={setCurrentAgent}
         onLogout={handleLogout}
       />
